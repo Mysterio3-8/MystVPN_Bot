@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mystvpn
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mystvpn_bot
+      POSTGRES_USER: mystvpn
+      POSTGRES_PASSWORD: mystvpn_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mystvpn -d mystvpn_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mystvpn
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - mystvpn
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  mystvpn:
+    driver: bridge
