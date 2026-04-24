@@ -39,30 +39,53 @@ class XrayService:
 
     @classmethod
     async def _get_inbound(cls, session: aiohttp.ClientSession, inbound_id: int) -> dict | None:
-        # Используем /get/:id — эффективнее, чем получать весь список
-        url = f"{cls._base_url()}/panel/api/inbounds/get/{inbound_id}"
-        try:
-            resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
-            ct = resp.headers.get("Content-Type", "")
-            if "text/html" in ct:
-                logger.error("XRay: сессия не активна (редирект на логин)")
-                return None
-            data = await resp.json(content_type=None)
-            if data.get("success"):
-                return data.get("obj")
-        except Exception as e:
-            logger.warning(f"XRay /get/{inbound_id} failed: {e}, trying /list")
+        base = cls._base_url()
 
-        # Fallback: получаем весь список
-        url = f"{cls._base_url()}/panel/api/inbounds/list"
-        try:
-            resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
-            data = await resp.json(content_type=None)
-            if data.get("success"):
-                inbounds = data.get("obj", [])
-                return next((i for i in inbounds if str(i.get("id")) == str(inbound_id)), None)
-        except Exception as e:
-            logger.error(f"XRay /list failed: {e}")
+        # Пробуем все известные пути 3x-ui (разные версии)
+        list_urls = [
+            f"{base}/panel/api/inbounds/list",
+            f"{base}/xui/API/inbounds",
+            f"{base}/api/inbounds",
+        ]
+        get_urls = [
+            f"{base}/panel/api/inbounds/get/{inbound_id}",
+            f"{base}/xui/API/inbounds/{inbound_id}",
+        ]
+
+        # Сначала пробуем /get/:id
+        for url in get_urls:
+            try:
+                resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
+                ct = resp.headers.get("Content-Type", "")
+                if "text/html" in ct:
+                    continue
+                data = await resp.json(content_type=None)
+                if data.get("success") and data.get("obj"):
+                    logger.info(f"XRay: нашли inbound через {url}")
+                    return data.get("obj")
+            except Exception as e:
+                logger.warning(f"XRay GET {url} failed: {e}")
+
+        # Потом пробуем /list и ищем нужный ID
+        for url in list_urls:
+            try:
+                resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
+                ct = resp.headers.get("Content-Type", "")
+                if "text/html" in ct:
+                    continue
+                data = await resp.json(content_type=None)
+                if data.get("success"):
+                    inbounds = data.get("obj", [])
+                    logger.info(f"XRay: получили {len(inbounds)} inbound(s) через {url}")
+                    found = next((i for i in inbounds if str(i.get("id")) == str(inbound_id)), None)
+                    if found:
+                        return found
+                    # Если ID не найден — логируем все доступные
+                    ids = [i.get("id") for i in inbounds]
+                    logger.warning(f"XRay: inbound {inbound_id} не найден. Доступные ID: {ids}")
+            except Exception as e:
+                logger.warning(f"XRay LIST {url} failed: {e}")
+
         return None
 
     @classmethod
@@ -84,10 +107,22 @@ class XrayService:
                 )
             inbound = await cls._get_inbound(session, config.xray_inbound_id)
             if not inbound:
+                # Пробуем получить список всех inbound'ов для подсказки
+                hint = ""
+                try:
+                    for url in [f"{base}/panel/api/inbounds/list", f"{base}/xui/API/inbounds"]:
+                        r = await session.get(url, timeout=aiohttp.ClientTimeout(total=5))
+                        d = await r.json(content_type=None)
+                        if d.get("success") and d.get("obj"):
+                            ids = [f"#{i.get('id')} {i.get('remark','')}" for i in d["obj"]]
+                            hint = f"\nДоступные inbound'ы: {', '.join(ids)}"
+                            break
+                except Exception:
+                    pass
                 return (
                     f"✅ Авторизация OK\n"
-                    f"❌ Inbound ID={config.xray_inbound_id} не найден\n"
-                    f"Проверь XRAY_INBOUND_ID в .env\n"
+                    f"❌ Inbound ID={config.xray_inbound_id} не найден{hint}\n"
+                    f"Обнови XRAY_INBOUND_ID в .env\n"
                     f"URL панели: {base}"
                 )
             protocol = inbound.get("protocol", "?")
