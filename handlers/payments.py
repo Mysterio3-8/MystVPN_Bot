@@ -1,4 +1,5 @@
 from aiogram import Router, F, Bot
+from aiogram.filters import Filter
 from aiogram.types import (
     CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
     Message,
@@ -9,6 +10,57 @@ from keyboards import back_keyboard
 from config import PLANS, config
 
 router = Router()
+
+
+# ──────────────────────────────────────────────────
+# Фильтр — только для администраторов
+# ──────────────────────────────────────────────────
+
+class IsAdmin(Filter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.from_user.id in config.admin_ids
+
+
+# ──────────────────────────────────────────────────
+# Бесплатная активация для администратора
+# ──────────────────────────────────────────────────
+
+@router.callback_query(IsAdmin(), F.data.startswith("pay_admin_free_"))
+async def pay_admin_free(callback: CallbackQuery) -> None:
+    plan_key = callback.data.replace("pay_admin_free_", "")
+    plan = PLANS.get(plan_key)
+    if not plan:
+        await callback.answer("Неверный тариф", show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    async with AsyncSessionLocal() as session:
+        sub = await SubscriptionService.create_pending(session, user_id, plan_key)
+        await SubscriptionService.activate(session, sub.id)
+        await PaymentService.create(
+            session,
+            user_id=user_id,
+            amount=0,
+            currency="RUB",
+            payment_method="admin_free",
+            plan=plan_key,
+            subscription_id=sub.id,
+            payment_ext_id=f"admin_free_{user_id}_{sub.id}",
+        )
+
+    sub_id = sub.id
+    vpn_key, sub_url = await XrayService.create_client(user_id, plan["days"])
+    if vpn_key:
+        async with AsyncSessionLocal() as session:
+            await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
+
+    await callback.message.edit_text(
+        f"👑 <b>Подписка активирована (Админ)</b>\n"
+        f"Тариф: <b>{plan['period']}</b>"
+        f"{fmt_key(vpn_key, sub_url)}",
+        parse_mode="HTML",
+    )
+    await callback.answer("✅ Активировано бесплатно", show_alert=True)
 
 
 # ──────────────────────────────────────────────────

@@ -103,11 +103,16 @@ def support_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
-def payment_method_keyboard(plan_key: str, lang: str = "ru") -> InlineKeyboardMarkup:
+def payment_method_keyboard(plan_key: str, lang: str = "ru", is_admin: bool = False) -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="💳 Оплатить картой", callback_data=f"pay_yookassa_{plan_key}")],
         [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")],
     ]
+    if is_admin:
+        buttons.insert(0, [InlineKeyboardButton(
+            text="👑 Активировать бесплатно (Админ)",
+            callback_data=f"pay_admin_free_{plan_key}",
+        )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 

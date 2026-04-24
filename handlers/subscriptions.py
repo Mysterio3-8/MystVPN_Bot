@@ -5,6 +5,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 from database import AsyncSessionLocal
 from services import UserService, SubscriptionService, PromoService, XrayService, i18n
+from config import config as bot_config
 from keyboards import tariffs_keyboard, payment_method_keyboard, back_keyboard
 from config import PLANS
 
@@ -51,6 +52,8 @@ async def choose_plan(callback: CallbackQuery) -> None:
         await callback.answer("Неверный тариф", show_alert=True)
         return
 
+    is_admin = callback.from_user.id in bot_config.admin_ids
+
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, callback.from_user.id)
         lang = user.language if user else "ru"
@@ -68,7 +71,11 @@ async def choose_plan(callback: CallbackQuery) -> None:
     else:
         text = i18n.t("plan_details", lang, period=period, price=f"{plan['price']:.0f}")
 
-    await callback.message.edit_text(text, reply_markup=payment_method_keyboard(plan_key, lang), parse_mode="HTML")
+    await callback.message.edit_text(
+        text,
+        reply_markup=payment_method_keyboard(plan_key, lang, is_admin=is_admin),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
