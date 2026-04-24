@@ -26,8 +26,6 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "ru") -> InlineKeyboa
 def cabinet_keyboard(has_subscription: bool = False, has_key: bool = True, lang: str = "ru") -> InlineKeyboardMarkup:
     buttons = []
     if has_subscription:
-        if not has_key:
-            buttons.append([InlineKeyboardButton(text="🔑 Получить ключ", callback_data="cabinet_get_key")])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_renew", lang), callback_data="cabinet_renew"),
             InlineKeyboardButton(text=i18n.t("btn_guide", lang), callback_data="cabinet_guide"),

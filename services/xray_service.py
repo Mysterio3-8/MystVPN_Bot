@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 import base64
@@ -7,6 +8,9 @@ from datetime import datetime
 import aiohttp
 
 logger = logging.getLogger(__name__)
+
+_RETRY_ATTEMPTS = 3
+_RETRY_DELAY = 2.0  # секунд между попытками
 
 
 class XrayService:
@@ -112,28 +116,18 @@ class XrayService:
         return f"{base}/{path}/{sub_id}"
 
     @classmethod
-    async def create_client(cls, user_id: int, days: int) -> tuple[str | None, str | None]:
-        """
-        Создаёт клиента в 3x-ui.
-        Возвращает (vpn_key, sub_url) — оба могут быть None при ошибке.
-        sub_url — ссылка-подписка для v2rayTUN/Hiddify (автообновление).
-        """
+    async def _create_client_once(cls, user_id: int, days: int) -> tuple[str | None, str | None]:
+        """Одна попытка создать клиента в 3x-ui."""
         from config import config
-        if not (config.xray_address or config.xray_host) or not config.xray_password:
-            logger.warning("XRay not configured — skipping key issuance")
-            return None, None
 
         client_uuid = str(uuid.uuid4())
-        # subId — уникальный ID подписки для subscription URL
         sub_id = uuid.uuid4().hex[:16]
-        # Email уникален за счёт части UUID — позволяет пользователю покупать повторно
         email = f"user_{user_id}_{client_uuid[:8]}"
         expiry_ms = int((datetime.utcnow().timestamp() + days * 86400) * 1000)
 
         async with aiohttp.ClientSession() as session:
             if not await cls._login(session):
-                logger.error("XRay login failed during create_client")
-                return None, None
+                raise RuntimeError("XRay login failed")
 
             client_settings = {
                 "id": int(config.xray_inbound_id),
@@ -154,29 +148,47 @@ class XrayService:
                 }),
             }
 
-            try:
-                url = f"{cls._base_url()}/panel/api/inbounds/addClient"
-                resp = await session.post(
-                    url,
-                    json=client_settings,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                )
-                add_data = await resp.json(content_type=None)
-                if not add_data.get("success"):
-                    logger.error(f"XRay addClient failed: {add_data.get('msg', add_data)}")
-                    return None, None
-            except Exception as e:
-                logger.error(f"XRay addClient error: {e}")
-                return None, None
+            url = f"{cls._base_url()}/panel/api/inbounds/addClient"
+            resp = await session.post(url, json=client_settings, timeout=aiohttp.ClientTimeout(total=15))
+            add_data = await resp.json(content_type=None)
+            if not add_data.get("success"):
+                raise RuntimeError(f"addClient failed: {add_data.get('msg', add_data)}")
 
             inbound = await cls._get_inbound(session, config.xray_inbound_id)
             if not inbound:
-                logger.error("XRay: inbound not found after addClient")
-                return None, None
+                raise RuntimeError("inbound not found after addClient")
 
             vpn_key = cls._build_key(inbound, client_uuid, user_id)
             sub_url = cls._build_sub_url(sub_id)
             return vpn_key, sub_url
+
+    @classmethod
+    async def create_client(cls, user_id: int, days: int) -> tuple[str | None, str | None]:
+        """
+        Создаёт клиента в 3x-ui с автоматическим retry.
+        Возвращает (vpn_key, sub_url) — гарантированно после 3 попыток.
+        """
+        from config import config
+        if not (config.xray_address or config.xray_host) or not config.xray_password:
+            logger.warning("XRay not configured — skipping key issuance")
+            return None, None
+
+        last_error: Exception | None = None
+        for attempt in range(1, _RETRY_ATTEMPTS + 1):
+            try:
+                vpn_key, sub_url = await cls._create_client_once(user_id, days)
+                if vpn_key:
+                    if attempt > 1:
+                        logger.info(f"XRay: ключ создан с попытки {attempt} для user {user_id}")
+                    return vpn_key, sub_url
+            except Exception as e:
+                last_error = e
+                logger.warning(f"XRay create_client attempt {attempt}/{_RETRY_ATTEMPTS} failed: {e}")
+                if attempt < _RETRY_ATTEMPTS:
+                    await asyncio.sleep(_RETRY_DELAY)
+
+        logger.error(f"XRay: все {_RETRY_ATTEMPTS} попытки создать ключ провалились для user {user_id}. Последняя ошибка: {last_error}")
+        return None, None
 
     @classmethod
     def _build_key(cls, inbound: dict, client_uuid: str, user_id: int) -> str | None:
