@@ -7,10 +7,7 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "ru") -> InlineKeyboa
     buttons = [
         [InlineKeyboardButton(text=i18n.t("btn_cabinet", lang), callback_data="menu_cabinet")],
         [InlineKeyboardButton(text=i18n.t("btn_buy", lang), callback_data="menu_buy")],
-        [
-            InlineKeyboardButton(text="📡 Статус серверов", callback_data="menu_status"),
-            InlineKeyboardButton(text="👥 Рефералы", callback_data="cabinet_referral"),
-        ],
+        [InlineKeyboardButton(text="👥 Рефералы", callback_data="menu_referral")],
         [InlineKeyboardButton(text=i18n.t("btn_support_project", lang), callback_data="menu_support")],
         [
             InlineKeyboardButton(text=i18n.t("btn_about", lang), callback_data="menu_about"),
@@ -26,9 +23,11 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "ru") -> InlineKeyboa
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def cabinet_keyboard(has_subscription: bool = False, lang: str = "ru") -> InlineKeyboardMarkup:
+def cabinet_keyboard(has_subscription: bool = False, has_key: bool = True, lang: str = "ru") -> InlineKeyboardMarkup:
     buttons = []
     if has_subscription:
+        if not has_key:
+            buttons.append([InlineKeyboardButton(text="🔑 Получить ключ", callback_data="cabinet_get_key")])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_renew", lang), callback_data="cabinet_renew"),
             InlineKeyboardButton(text=i18n.t("btn_guide", lang), callback_data="cabinet_guide"),

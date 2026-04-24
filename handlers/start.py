@@ -22,7 +22,7 @@ async def _offer_trial(message: Message, lang: str) -> None:
     ])
     await message.answer(
         f"👋 <b>MystVPN</b>\n\n"
-        f"VPN который работает в России — VLESS+XHTTP, Hysteria2.\n\n"
+        f"VPN который работает в России.\n\n"
         f"Попробуй <b>{TRIAL_DAYS} дня бесплатно</b> прямо сейчас 👇",
         reply_markup=keyboard,
         parse_mode="HTML",

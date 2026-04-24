@@ -19,7 +19,6 @@ from handlers import (
     gift_router,
     donate_router,
     referral_router,
-    status_router,
 )
 from services import run_notification_loop
 from webhook_server import create_webhook_app
@@ -110,7 +109,6 @@ async def main() -> None:
     dp.include_router(payments_router)
     dp.include_router(admin_router)
     dp.include_router(referral_router)
-    dp.include_router(status_router)
 
     webhook_app = create_webhook_app(bot=bot)
 

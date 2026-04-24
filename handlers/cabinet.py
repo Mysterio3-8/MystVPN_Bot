@@ -30,13 +30,16 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
         )
 
         # Subscription URL — главное, сырой ключ не показываем
-        text += fmt_key(sub.vpn_key, sub.sub_url)
+        if sub.vpn_key or sub.sub_url:
+            text += fmt_key(sub.vpn_key, sub.sub_url)
+        else:
+            text += "\n\n⚠️ <b>Ключ ещё не выдан</b> — нажми кнопку ниже, чтобы получить"
 
         if extra_days:
             text += f"\n\n🎁 Бонусных дней: <b>{extra_days}</b>"
         if ref_count:
             text += f"\n👥 Рефералов: <b>{ref_count}</b>"
-        return text, True
+        return text, True, bool(sub.vpn_key or sub.sub_url)
 
     text = (
         f"👤 <b>Личный кабинет</b>\n\n"
@@ -44,7 +47,7 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
     )
     if extra_days:
         text += f"\n🎁 Накоплено реф-дней: <b>{extra_days}</b> (применятся после покупки)"
-    return text, False
+    return text, False, False
 
 
 @router.message(Command("cabinet"))
@@ -52,8 +55,8 @@ async def cmd_cabinet(message: Message) -> None:
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, message.from_user.id)
         lang = user.language if user else "ru"
-    text, has_sub = await _cabinet_text(message.from_user.id, lang)
-    await message.answer(text, reply_markup=cabinet_keyboard(has_sub, lang), parse_mode="HTML")
+    text, has_sub, has_key = await _cabinet_text(message.from_user.id, lang)
+    await message.answer(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "menu_cabinet")
@@ -61,8 +64,8 @@ async def cabinet_callback(callback: CallbackQuery) -> None:
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, callback.from_user.id)
         lang = user.language if user else "ru"
-    text, has_sub = await _cabinet_text(callback.from_user.id, lang)
-    await callback.message.edit_text(text, reply_markup=cabinet_keyboard(has_sub, lang), parse_mode="HTML")
+    text, has_sub, has_key = await _cabinet_text(callback.from_user.id, lang)
+    await callback.message.edit_text(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang), parse_mode="HTML")
     await callback.answer()
 
 
@@ -136,6 +139,42 @@ async def cancel_subscription_confirmed(callback: CallbackQuery) -> None:
             reply_markup=back_keyboard("menu_cabinet", lang),
         )
     await callback.answer()
+
+
+@router.callback_query(F.data == "cabinet_get_key")
+async def get_key(callback: CallbackQuery) -> None:
+    """Выдать ключ если он не был выдан при оплате (XRay был недоступен)."""
+    user_id = callback.from_user.id
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, user_id)
+        lang = user.language if user else "ru"
+        sub = await SubscriptionService.get_active(session, user_id)
+
+    if not sub:
+        await callback.answer("❌ Нет активной подписки", show_alert=True)
+        return
+
+    if sub.vpn_key or sub.sub_url:
+        await callback.answer("✅ Ключ уже выдан — обнови кабинет", show_alert=True)
+        return
+
+    await callback.answer("⏳ Создаю ключ...")
+    days_left = max(1, (sub.end_date - datetime.utcnow()).days)
+    vpn_key, sub_url = await XrayService.create_client(user_id, days_left)
+
+    if vpn_key:
+        from services import fmt_key
+        async with AsyncSessionLocal() as session:
+            await SubscriptionService.save_key(session, sub.id, vpn_key, sub_url)
+        text = f"✅ <b>Ключ успешно получен!</b>{fmt_key(vpn_key, sub_url)}"
+        await callback.message.edit_text(text, reply_markup=back_keyboard("menu_cabinet", lang), parse_mode="HTML")
+    else:
+        await callback.message.edit_text(
+            "❌ <b>Не удалось подключиться к VPN-панели.</b>\n\n"
+            "Попробуй позже или напиши в поддержку: @Myst_support",
+            reply_markup=back_keyboard("menu_cabinet", lang),
+            parse_mode="HTML",
+        )
 
 
 @router.callback_query(F.data == "cabinet_reset_key")

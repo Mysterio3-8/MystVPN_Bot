@@ -1,7 +1,8 @@
 """
 Реферальная программа — хендлеры.
 /referral — показать реф-ссылку и статистику
-cabinet_referral — кнопка из кабинета
+cabinet_referral — кнопка из кабинета (назад → кабинет)
+menu_referral — кнопка из главного меню (назад → главное меню)
 cabinet_apply_bonus — применить накопленные дни к подписке
 """
 from aiogram import Router, F
@@ -14,7 +15,7 @@ from config import REFERRAL_BONUS_DAYS, REFERRAL_MILESTONE, REFERRAL_MILESTONE_D
 router = Router()
 
 
-async def _referral_text(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
+async def _referral_text(user_id: int, back_target: str = "menu_cabinet") -> tuple[str, InlineKeyboardMarkup]:
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, user_id)
         count = await ReferralService.get_referral_count(session, user_id)
@@ -49,20 +50,29 @@ async def _referral_text(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
             text=f"⚠️ Нет активной подписки (дни сохранены)",
             callback_data="menu_buy",
         )])
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="menu_cabinet")])
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_target)])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return text, keyboard
 
 
 @router.message(Command("referral"))
 async def cmd_referral(message: Message) -> None:
-    text, keyboard = await _referral_text(message.from_user.id)
+    text, keyboard = await _referral_text(message.from_user.id, back_target="back_to_menu")
     await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 
+# Открытие рефералов из ГЛАВНОГО МЕНЮ → назад в главное меню
+@router.callback_query(F.data == "menu_referral")
+async def menu_referral(callback: CallbackQuery) -> None:
+    text, keyboard = await _referral_text(callback.from_user.id, back_target="back_to_menu")
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
+
+
+# Открытие рефералов из КАБИНЕТА → назад в кабинет
 @router.callback_query(F.data == "cabinet_referral")
 async def cabinet_referral(callback: CallbackQuery) -> None:
-    text, keyboard = await _referral_text(callback.from_user.id)
+    text, keyboard = await _referral_text(callback.from_user.id, back_target="menu_cabinet")
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     await callback.answer()
 

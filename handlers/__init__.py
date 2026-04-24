@@ -7,7 +7,6 @@ from .languages import router as languages_router
 from .gift import router as gift_router
 from .donate import router as donate_router
 from .referral import router as referral_router
-from .status import router as status_router
 
 __all__ = [
     "start_router",
@@ -19,5 +18,4 @@ __all__ = [
     "gift_router",
     "donate_router",
     "referral_router",
-    "status_router",
 ]
