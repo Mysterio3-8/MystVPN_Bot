@@ -33,7 +33,7 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
         if sub.vpn_key or sub.sub_url:
             text += fmt_key(sub.vpn_key, sub.sub_url)
         else:
-            text += "\n\n⚠️ <b>Ключ ещё не выдан</b> — нажми кнопку ниже, чтобы получить"
+            text += "\n\n⚠️ <b>Ключ не выдан</b> — обратись в поддержку: @Myst_support"
 
         if extra_days:
             text += f"\n\n🎁 Бонусных дней: <b>{extra_days}</b>"
