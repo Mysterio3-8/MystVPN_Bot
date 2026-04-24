@@ -4,7 +4,7 @@
 # */2 * * * * /root/MystBot/MystBot/auto_deploy.sh >> /root/MystBot/deploy.log 2>&1
 
 BOT_DIR="/root/MystBot/MystBot"
-BRANCH="main"
+BRANCH="master"
 
 cd "$BOT_DIR" || exit 1
 
