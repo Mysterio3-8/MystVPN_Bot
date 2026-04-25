@@ -1,63 +1,36 @@
-name: Deploy to Server
+name: Deploy MystVPN Bot
 
 on:
   push:
-    branches: [master]
+    branches: [ master, main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Sync files to server
-        run: |
-          rsync -az --delete \
-            --exclude='.git' \
-            --exclude='.env' \
-            --exclude='.venv' \
-            --exclude='__pycache__' \
-            --exclude='*.pyc' \
-            --exclude='*.log' \
-            --exclude='mystvpn_local.db' \
-            --exclude='3x-ui-main' \
-            --exclude='deploy_key*' \
-            ./ root@${{ secrets.SERVER_HOST }}:/root/MystBot/
-
-      - name: Deploy on server
-        run: |
-          ssh root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          password: ${{ secrets.SERVER_PASS }}
+          script: |
             set -e
             cd /root/MystBot
 
-            # Права на скрипты
+            git pull origin master 2>/dev/null || git pull origin main
+
             chmod +x scripts/*.sh
 
-            # Регистрируем бэкап в cron (если ещё нет)
+            # Регистрируем автобэкап в cron (один раз, каждую ночь в 03:00)
             CRON_JOB="0 3 * * * /root/MystBot/scripts/backup.sh >> /root/MystBot/backup.log 2>&1"
             ( crontab -l 2>/dev/null | grep -qF "backup.sh" ) || \
-              ( crontab -l 2>/dev/null; echo "$CRON_JOB" ) | crontab -
+              { crontab -l 2>/dev/null; echo "$CRON_JOB"; } | crontab -
 
-            echo "=== Rebuilding bot ==="
-            docker compose up -d --build bot nginx certbot
-
-            echo "=== Waiting for startup ==="
+            docker compose up -d --build bot
+            docker compose up -d nginx certbot
             sleep 8
-
-            echo "=== Running migrations ==="
             docker compose exec -T bot python migrate.py || true
 
-            echo "=== Status ==="
             docker compose ps
-
-            echo "=== Deploy complete: $(date '+%Y-%m-%d %H:%M:%S') ==="
-          ENDSSH
+            echo "✅ Deployed at $(date)"
