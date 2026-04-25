@@ -1,0 +1,50 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='*.log' \
+            --exclude='mystvpn_local.db' \
+            --exclude='3x-ui-main' \
+            --exclude='deploy_key*' \
+            ./ root@${{ secrets.SERVER_HOST }}:/root/MystBot/
+
+      - name: Rebuild and restart bot
+        run: |
+          ssh root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+            cd /root/MystBot
+            echo "=== Rebuilding bot container ==="
+            docker compose up -d --build bot
+            echo "=== Waiting for startup ==="
+            sleep 8
+            echo "=== Running migrations ==="
+            docker compose exec -T bot python migrate.py || true
+            echo "=== Container status ==="
+            docker compose ps
+            echo "=== Deploy complete at $(date '+%Y-%m-%d %H:%M:%S') ==="
+          ENDSSH

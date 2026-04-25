@@ -1,9 +1,9 @@
 #!/bin/bash
-# Автодеплой MystBot: запускать по cron каждые 2 минуты
+# Резервный автодеплой (fallback). Основной деплой — через GitHub Actions.
 # Установка: crontab -e → добавить строку:
-# */2 * * * * /root/MystBot/MystBot/auto_deploy.sh >> /root/MystBot/deploy.log 2>&1
+# */5 * * * * /root/MystBot/auto_deploy.sh >> /root/MystBot/deploy.log 2>&1
 
-BOT_DIR="/root/MystBot/MystBot"
+BOT_DIR="/root/MystBot"
 BRANCH="master"
 
 cd "$BOT_DIR" || exit 1

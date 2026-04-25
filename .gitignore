@@ -1,1 +1,11 @@
-".env`n__pycache__/`n*.pyc`nbot.log" 
+.env
+__pycache__/
+*.pyc
+*.pyo
+bot.log
+*.log
+mystvpn_local.db
+.venv/
+deploy_key
+deploy_key.pub
+deploy_to_server.ps1
