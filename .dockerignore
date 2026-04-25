@@ -1,0 +1,16 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+.env
+bot.log
+*.log
+mystvpn_local.db
+nginx
+scripts
+3x-ui-main
+deploy_key
+deploy_key.pub
+deploy_to_server.ps1
+.idea
