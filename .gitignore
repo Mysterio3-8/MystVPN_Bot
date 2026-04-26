@@ -1,11 +1,26 @@
+# Secrets
 .env
-__pycache__/
-*.pyc
-*.pyo
-bot.log
-*.log
-mystvpn_local.db
-.venv/
 deploy_key
 deploy_key.pub
 deploy_to_server.ps1
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Logs & DB
+*.log
+*.db
+
+# IDE
+.idea/
+.vscode/
+
+# Junk
+3x-ui-main/
+БИЗНЕС_ПЛАН_MystVPN.md
