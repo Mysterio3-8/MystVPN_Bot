@@ -22,6 +22,17 @@ class XrayService:
             return config.xray_address.rstrip("/")
         return f"http://{config.xray_host}:{config.xray_port}"
 
+    @staticmethod
+    def _session() -> aiohttp.ClientSession:
+        import ssl as _ssl
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+        connector = aiohttp.TCPConnector(ssl=ctx)
+        # unsafe=True позволяет хранить куки для IP-адресов (не только доменов)
+        jar = aiohttp.CookieJar(unsafe=True)
+        return aiohttp.ClientSession(connector=connector, cookie_jar=jar)
+
     @classmethod
     async def _login(cls, session: aiohttp.ClientSession) -> bool:
         from config import config
@@ -96,7 +107,7 @@ class XrayService:
             return "❌ XRAY_HOST / XRAY_ADDRESS не настроены в .env"
         if not config.xray_password:
             return "❌ XRAY_PASSWORD не задан в .env"
-        async with aiohttp.ClientSession() as session:
+        async with cls._session() as session:
             ok = await cls._login(session)
             if not ok:
                 return (
@@ -160,7 +171,7 @@ class XrayService:
         email = f"user_{user_id}_{client_uuid[:8]}"
         expiry_ms = int((datetime.utcnow().timestamp() + days * 86400) * 1000)
 
-        async with aiohttp.ClientSession() as session:
+        async with cls._session() as session:
             if not await cls._login(session):
                 raise RuntimeError("XRay login failed")
 
@@ -302,7 +313,7 @@ class XrayService:
         from config import config
         if not (config.xray_address or config.xray_host) or not config.xray_password:
             return False
-        async with aiohttp.ClientSession() as session:
+        async with cls._session() as session:
             if not await cls._login(session):
                 return False
             if not client_uuid:
