@@ -260,7 +260,8 @@ class XrayService:
                 short_ids = reality.get("shortIds", [""])
                 short_id = short_ids[0] if short_ids else ""
                 pbk = reality.get("settings", {}).get("publicKey", "")
-                fp = "chrome"
+                fp = reality.get("settings", {}).get("fingerprint", "chrome")
+                spx = reality.get("settings", {}).get("spiderX", "/")
             else:
                 tls_settings = stream.get("tlsSettings", {})
                 sni = tls_settings.get("serverName", ws_host)
@@ -271,12 +272,14 @@ class XrayService:
             logger.error(f"XRay stream parse error: {e}")
             return None
 
-        tag = f"MystVPN-{user_id}"
+        tag = f"MystVPN"
         if protocol == "vless":
             if security == "reality":
+                import urllib.parse
                 params = (
                     f"type={network}&security=reality"
-                    f"&pbk={pbk}&fp={fp}&sni={sni}&sid={short_id}&flow=xtls-rprx-vision"
+                    f"&pbk={pbk}&fp={fp}&sni={sni}&sid={short_id}"
+                    f"&flow=xtls-rprx-vision&spx={urllib.parse.quote(spx, safe='')}"
                 )
             else:
                 params = f"type={network}&security={security}&path={path}&host={ws_host}&sni={sni}&fp={fp}"
