@@ -21,6 +21,7 @@ from handlers import (
     referral_router,
 )
 from services import run_notification_loop
+from services.notification_service import run_inbound_watchdog
 from webhook_server import create_webhook_app
 
 
@@ -118,6 +119,7 @@ async def main() -> None:
             dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types()),
             run_webhook_server(webhook_app, config.webhook_port),
             run_notification_loop(bot),
+            run_inbound_watchdog(bot),
         )
     except (KeyboardInterrupt, SystemExit, asyncio.CancelledError):
         logger.info("🛑 Остановка по сигналу пользователя")

@@ -10,7 +10,10 @@ import aiohttp
 logger = logging.getLogger(__name__)
 
 _RETRY_ATTEMPTS = 3
-_RETRY_DELAY = 2.0  # секунд между попытками
+_RETRY_DELAY = 2.0
+
+# Динамический ID inbound — обновляется watchdog'ом если inbound был пересоздан
+_active_inbound_id: int | None = None
 
 
 class XrayService:
@@ -21,6 +24,11 @@ class XrayService:
         if config.xray_address:
             return config.xray_address.rstrip("/")
         return f"http://{config.xray_host}:{config.xray_port}"
+
+    @staticmethod
+    def get_inbound_id() -> int:
+        from config import config
+        return _active_inbound_id if _active_inbound_id is not None else config.xray_inbound_id
 
     @staticmethod
     def _session() -> aiohttp.ClientSession:
@@ -116,7 +124,7 @@ class XrayService:
                     f"Логин: {config.xray_username}\n"
                     f"Проверь XRAY_USERNAME и XRAY_PASSWORD в .env"
                 )
-            inbound = await cls._get_inbound(session, config.xray_inbound_id)
+            inbound = await cls._get_inbound(session, cls.get_inbound_id())
             if not inbound:
                 # Пробуем получить список всех inbound'ов для подсказки
                 hint = ""
@@ -132,7 +140,7 @@ class XrayService:
                     pass
                 return (
                     f"✅ Авторизация OK\n"
-                    f"❌ Inbound ID={config.xray_inbound_id} не найден{hint}\n"
+                    f"❌ Inbound ID={cls.get_inbound_id()} не найден{hint}\n"
                     f"Обнови XRAY_INBOUND_ID в .env\n"
                     f"URL панели: {base}"
                 )
@@ -142,7 +150,7 @@ class XrayService:
             return (
                 f"✅ 3x-ui подключён!\n"
                 f"URL панели: {base}\n"
-                f"Inbound #{config.xray_inbound_id}: {protocol} :{port}"
+                f"Inbound #{cls.get_inbound_id()}: {protocol} :{port}"
                 + (f" ({remark})" if remark else "")
             )
 
@@ -176,7 +184,7 @@ class XrayService:
                 raise RuntimeError("XRay login failed")
 
             client_settings = {
-                "id": int(config.xray_inbound_id),
+                "id": int(cls.get_inbound_id()),
                 "settings": json.dumps({
                     "clients": [{
                         "id": client_uuid,
@@ -200,7 +208,7 @@ class XrayService:
             if not add_data.get("success"):
                 raise RuntimeError(f"addClient failed: {add_data.get('msg', add_data)}")
 
-            inbound = await cls._get_inbound(session, config.xray_inbound_id)
+            inbound = await cls._get_inbound(session, cls.get_inbound_id())
             if not inbound:
                 raise RuntimeError("inbound not found after addClient")
 
@@ -324,7 +332,7 @@ class XrayService:
                 return False
             try:
                 resp = await session.post(
-                    f"{cls._base_url()}/panel/api/inbounds/{config.xray_inbound_id}/delClient/{client_uuid}",
+                    f"{cls._base_url()}/panel/api/inbounds/{cls.get_inbound_id()}/delClient/{client_uuid}",
                     timeout=aiohttp.ClientTimeout(total=10),
                 )
                 data = await resp.json(content_type=None)
@@ -339,3 +347,79 @@ class XrayService:
         client_uuid = cls._extract_uuid(old_key) if old_key else None
         await cls.remove_client(user_id, client_uuid)
         return await cls.create_client(user_id, days)
+
+    @classmethod
+    async def recreate_inbound(cls) -> tuple[bool, int]:
+        """
+        Пересоздаёт Reality inbound с актуальными российскими настройками (vk.com).
+        Возвращает (success, new_inbound_id).
+        Вызывается watchdog'ом автоматически при обнаружении отсутствия inbound.
+        """
+        global _active_inbound_id
+        from config import config
+        import secrets
+
+        private_key = config.reality_private_key
+        public_key = config.reality_public_key
+        short_id = config.reality_short_id or secrets.token_hex(8)
+        dest = config.reality_dest or "vk.com:443"
+        sni = config.reality_sni or dest.split(":")[0]
+
+        if not private_key or not public_key:
+            logger.error("XRay recreate_inbound: REALITY_PRIVATE_KEY / REALITY_PUBLIC_KEY не заданы в .env")
+            return False, 0
+
+        inbound = {
+            "enable": True,
+            "remark": "MystVPN-Main",
+            "listen": "",
+            "port": 443,
+            "protocol": "vless",
+            "settings": json.dumps({"clients": [], "decryption": "none", "fallbacks": []}),
+            "streamSettings": json.dumps({
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                    "show": False,
+                    "dest": dest,
+                    "xver": 0,
+                    "serverNames": [sni],
+                    "privateKey": private_key,
+                    "shortIds": [short_id],
+                    "settings": {
+                        "publicKey": public_key,
+                        "fingerprint": "chrome",
+                        "serverName": "",
+                        "spiderX": "/",
+                    },
+                },
+                "tcpSettings": {"acceptProxyProtocol": False, "header": {"type": "none"}},
+            }),
+            "sniffing": json.dumps({
+                "enabled": True,
+                "destOverride": ["http", "tls", "quic"],
+                "metadataOnly": False,
+            }),
+        }
+
+        async with cls._session() as session:
+            if not await cls._login(session):
+                logger.error("XRay recreate_inbound: login failed")
+                return False, 0
+            try:
+                resp = await session.post(
+                    f"{cls._base_url()}/panel/api/inbounds/add",
+                    json=inbound,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                )
+                data = await resp.json(content_type=None)
+                if data.get("success") and data.get("obj"):
+                    new_id = data["obj"].get("id", 0)
+                    _active_inbound_id = new_id
+                    logger.info(f"XRay: inbound пересоздан, новый ID={new_id}, dest={dest}, sni={sni}")
+                    return True, new_id
+                logger.error(f"XRay recreate_inbound API error: {data.get('msg', data)}")
+                return False, 0
+            except Exception as e:
+                logger.error(f"XRay recreate_inbound exception: {e}")
+                return False, 0

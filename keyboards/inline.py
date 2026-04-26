@@ -7,16 +7,15 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "ru") -> InlineKeyboa
     buttons = [
         [InlineKeyboardButton(text=i18n.t("btn_cabinet", lang), callback_data="menu_cabinet")],
         [InlineKeyboardButton(text=i18n.t("btn_buy", lang), callback_data="menu_buy")],
-        [InlineKeyboardButton(text="👥 Рефералы", callback_data="menu_referral")],
-        [InlineKeyboardButton(text=i18n.t("btn_support_project", lang), callback_data="menu_support")],
         [
             InlineKeyboardButton(text=i18n.t("btn_about", lang), callback_data="menu_about"),
-            InlineKeyboardButton(text=i18n.t("btn_help", lang), url="https://t.me/Myst_support"),
+            InlineKeyboardButton(text=i18n.t("btn_support_project", lang), callback_data="menu_support"),
         ],
         [
             InlineKeyboardButton(text=i18n.t("btn_channel", lang), url="https://t.me/MysterioVPN"),
-            InlineKeyboardButton(text=i18n.t("btn_language", lang), callback_data="menu_language"),
+            InlineKeyboardButton(text=i18n.t("btn_help", lang), url="https://t.me/Myst_support"),
         ],
+        [InlineKeyboardButton(text=i18n.t("btn_language", lang), callback_data="menu_language")],
     ]
     if is_admin:
         buttons.append([InlineKeyboardButton(text="🔧 Admin Panel", callback_data="admin_panel")])
@@ -32,14 +31,10 @@ def cabinet_keyboard(has_subscription: bool = False, has_key: bool = True, lang:
         ])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_reset_key", lang), callback_data="cabinet_reset_key"),
-            InlineKeyboardButton(text=i18n.t("btn_cancel_sub", lang), callback_data="cabinet_cancel"),
         ])
     else:
         buttons.append([InlineKeyboardButton(text=i18n.t("btn_buy", lang), callback_data="menu_buy")])
-    buttons.append([
-        InlineKeyboardButton(text="👥 Рефералы", callback_data="cabinet_referral"),
-        InlineKeyboardButton(text=i18n.t("btn_history", lang), callback_data="cabinet_history"),
-    ])
+    buttons.append([InlineKeyboardButton(text="👥 Рефералы", callback_data="cabinet_referral")])
     buttons.append([InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="back_to_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -47,9 +42,9 @@ def cabinet_keyboard(has_subscription: bool = False, has_key: bool = True, lang:
 def tariffs_keyboard(lang: str = "ru", show_trial: bool = False) -> InlineKeyboardMarkup:
     prices = [
         ("1_month",  i18n.t("plan_period_1m", lang), "219 ₽",  ""),
-        ("3_months", i18n.t("plan_period_3m", lang), "549 ₽",  " (-16%) ⭐ Популярный"),
+        ("3_months", i18n.t("plan_period_3m", lang), "549 ₽",  " (-16%)"),
         ("6_months", i18n.t("plan_period_6m", lang), "999 ₽",  " (-24%)"),
-        ("1_year",   i18n.t("plan_period_1y", lang), "1 799 ₽", " (-32%) 🔥 Выгоднее всего"),
+        ("1_year",   i18n.t("plan_period_1y", lang), "1 799 ₽", " (-32%)"),
     ]
     buttons = [
         [InlineKeyboardButton(text=f"{period} • {price}{discount}", callback_data=f"plan_{key}")]
