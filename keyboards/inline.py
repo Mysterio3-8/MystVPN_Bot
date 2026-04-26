@@ -111,7 +111,7 @@ def payment_method_keyboard(plan_key: str, lang: str = "ru", is_admin: bool = Fa
 def about_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=i18n.t("btn_payment_safety", lang), callback_data="about_payment_safety")],
-        [InlineKeyboardButton(text=i18n.t("btn_oferta", lang), url="https://teletype.in/@MysterioVPN/oferta")],
+        [InlineKeyboardButton(text=i18n.t("btn_oferta", lang), url="https://teletype.in/@mystadm/X2oafHAItL9")],
         [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="back_to_menu")],
     ])
 
