@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from config import config
 
-_connect_args = {"check_same_thread": False} if config.database_url.startswith("sqlite") else {}
+_connect_args = {"check_same_thread": False} if config.database_url.startswith("sqlite") else {"ssl": False}
 engine = create_async_engine(config.database_url, echo=False, connect_args=_connect_args)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
