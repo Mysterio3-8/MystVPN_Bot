@@ -176,7 +176,7 @@ class XrayService:
 
         client_uuid = str(uuid.uuid4())
         sub_id = uuid.uuid4().hex[:16]
-        email = f"user_{user_id}_{client_uuid[:8]}"
+        email = ""  # пустой — 3x-ui не добавляет суффикс к имени сервера
         expiry_ms = int((datetime.utcnow().timestamp() + days * 86400) * 1000)
 
         async with cls._session() as session:
