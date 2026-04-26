@@ -18,19 +18,24 @@ jobs:
             set -e
             cd /root/MystBot
 
-            git pull origin master 2>/dev/null || git pull origin main
+            echo ">>> Git pull..."
+            git pull origin master
 
-            chmod +x scripts/*.sh
+            echo ">>> Rebuild & restart bot..."
+            docker compose up -d --build bot
 
-            # Регистрируем автобэкап в cron (один раз, каждую ночь в 03:00)
+            echo ">>> Waiting for DB..."
+            sleep 10
+
+            echo ">>> Migrations..."
+            docker compose exec -T bot python migrate.py || true
+
+            echo ">>> Register backup cron (once)..."
             CRON_JOB="0 3 * * * /root/MystBot/scripts/backup.sh >> /root/MystBot/backup.log 2>&1"
             ( crontab -l 2>/dev/null | grep -qF "backup.sh" ) || \
               { crontab -l 2>/dev/null; echo "$CRON_JOB"; } | crontab -
 
-            docker compose up -d --build bot
-            docker compose up -d nginx certbot
-            sleep 8
-            docker compose exec -T bot python migrate.py || true
-
+            echo ">>> Status:"
             docker compose ps
-            echo "✅ Deployed at $(date)"
+
+            echo "✅ Deployed $(git rev-parse --short HEAD) at $(date)"
