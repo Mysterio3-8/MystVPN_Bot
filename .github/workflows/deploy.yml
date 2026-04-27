@@ -23,10 +23,20 @@ jobs:
 
             echo ">>> Setup WireGuard (idempotent)..."
             ufw allow 51820/udp || true
-            # wg-easy нужен bcrypt хеш пароля — если не задан, пропускаем
-            if grep -q "WG_PASSWORD_HASH" .env && ! grep -q 'WG_PASSWORD_HASH=$' .env; then
-              docker compose up -d wg-easy || true
+            # Если WG ещё не настроен — генерируем пароль и хеш автоматически
+            if ! grep -q "WG_PASSWORD_HASH" /root/MystBot/.env 2>/dev/null; then
+              echo ">>> Configuring WireGuard password automatically..."
+              WG_PASS="MystWG2026"
+              WG_HASH=$(docker run --rm ghcr.io/wg-easy/wg-easy:14 wgpw "$WG_PASS" 2>/dev/null | grep -oP '\$2[ab]\$\d+\$[A-Za-z0-9./]+')
+              if [ -n "$WG_HASH" ]; then
+                echo "WG_HOST=77.110.96.77" >> /root/MystBot/.env
+                echo "WG_PASSWORD_HASH=$WG_HASH" >> /root/MystBot/.env
+                echo "WG_API_URL=http://wg-easy:51821" >> /root/MystBot/.env
+                echo "WG_API_PASSWORD=$WG_PASS" >> /root/MystBot/.env
+                echo ">>> WireGuard configured!"
+              fi
             fi
+            docker compose up -d wg-easy || true
 
             echo ">>> Rebuild & restart bot..."
             docker compose up -d --build bot
