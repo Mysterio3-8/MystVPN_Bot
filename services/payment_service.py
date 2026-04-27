@@ -81,7 +81,8 @@ class PaymentService:
             raise RuntimeError("yookassa не установлен")
         import uuid
         payment = YooPayment.create({
-            "amount": {"value": str(amount), "currency": "RUB"},
+            "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
+            "capture": True,
             "payment_method_data": {"type": "bank_card"},
             "confirmation": {"type": "redirect", "return_url": return_url},
             "description": f"MystVPN подписка — {plan_key}",
@@ -96,7 +97,8 @@ class PaymentService:
             raise RuntimeError("yookassa не установлен")
         import uuid
         payment = YooPayment.create({
-            "amount": {"value": str(amount), "currency": "RUB"},
+            "amount": {"value": f"{amount:.2f}", "currency": "RUB"},
+            "capture": True,
             "payment_method_data": {"type": "sbp"},
             "confirmation": {"type": "redirect", "return_url": return_url},
             "description": f"MystVPN подписка — {plan_key}",
@@ -122,5 +124,12 @@ class PaymentService:
     async def check_yookassa(payment_ext_id: str) -> str:
         if not YOOKASSA_AVAILABLE:
             raise RuntimeError("yookassa не установлен")
+        import uuid as _uuid
         payment = YooPayment.find_one(payment_ext_id)
+        if payment.status == "waiting_for_capture":
+            payment = YooPayment.capture(
+                payment_ext_id,
+                {"amount": {"value": payment.amount.value, "currency": payment.amount.currency}},
+                _uuid.uuid4(),
+            )
         return payment.status
