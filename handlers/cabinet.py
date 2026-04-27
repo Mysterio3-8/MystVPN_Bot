@@ -106,37 +106,12 @@ async def payment_history(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "cabinet_guide")
 async def connection_guide(callback: CallbackQuery) -> None:
-    user_id = callback.from_user.id
-    async with AsyncSessionLocal() as session:
-        user = await UserService.get(session, user_id)
-        lang = user.language if user else "ru"
-        sub = await SubscriptionService.get_active(session, user_id)
-    text = i18n.t("connection_guide", lang)
-    await callback.message.edit_text(text, reply_markup=back_keyboard("menu_cabinet", lang), parse_mode="HTML")
+    """Fallback — кнопка стала URL-кнопкой, но оставляем хендлер на случай старых клиентов."""
     await callback.answer()
-    # Автоматически отправить WireGuard файл если подписка активна
-    if sub:
-        wg_peer_id = sub.wg_peer_id
-        if not wg_peer_id:
-            wg_peer_id = await WireGuardService.create_peer(user_id)
-            if wg_peer_id:
-                async with AsyncSessionLocal() as session:
-                    await SubscriptionService.save_wg_peer_id(session, sub.id, wg_peer_id)
-        if wg_peer_id:
-            conf = await WireGuardService.get_config(wg_peer_id)
-            if conf:
-                conf_file = BufferedInputFile(conf.encode(), filename="MystVPN.conf")
-                await callback.message.answer_document(
-                    conf_file,
-                    caption=(
-                        "📡 <b>Твой WireGuard ключ</b>\n\n"
-                        "Импортируй в приложение <b>WireGuard</b>:\n"
-                        "📱 Android / iPhone → «+» → Импорт из файла\n"
-                        "💻 Windows / Mac → Импортировать туннель\n\n"
-                        "✅ Работает для всех приложений без настройки"
-                    ),
-                    parse_mode="HTML",
-                )
+    await callback.message.answer(
+        "📖 Инструкция по подключению: http://keybest.cc/guide",
+        disable_web_page_preview=False,
+    )
 
 
 @router.callback_query(F.data == "cabinet_cancel")

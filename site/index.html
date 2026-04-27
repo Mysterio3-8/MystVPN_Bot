@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MystVPN — Инструкция по подключению</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d0d0f;
+      color: #e8e8f0;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      padding: 48px 20px 40px;
+      text-align: center;
+      border-bottom: 1px solid rgba(99,102,241,0.2);
+    }
+
+    .logo {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: #e8e8f0; -webkit-text-fill-color: #e8e8f0; }
+
+    header p {
+      margin-top: 10px;
+      color: #9ca3af;
+      font-size: 16px;
+    }
+
+    /* Tabs */
+    .tabs-wrapper {
+      max-width: 680px;
+      margin: 36px auto 0;
+      padding: 0 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 6px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      background: transparent;
+      color: #9ca3af;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tab:hover { color: #e8e8f0; background: rgba(255,255,255,0.06); }
+
+    .tab.active {
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+    }
+
+    .tab-icon { font-size: 16px; }
+
+    /* Content */
+    .content {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 32px 16px 60px;
+    }
+
+    .platform { display: none; }
+    .platform.active { display: block; }
+
+    /* Download card */
+    .download-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .app-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+
+    .app-info h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .app-info p { color: #9ca3af; font-size: 14px; margin-bottom: 12px; }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+    }
+
+    .btn-download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(99,102,241,0.45);
+    }
+
+    /* Steps */
+    .steps-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+    }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 18px;
+      transition: border-color 0.2s;
+    }
+
+    .step:hover { border-color: rgba(99,102,241,0.3); }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .step-body p { color: #9ca3af; font-size: 14px; line-height: 1.5; }
+
+    .step-body code {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      color: #a5b4fc;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    /* Note */
+    .note {
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 20px;
+      color: #fbbf24;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .note strong { color: #f59e0b; }
+
+    /* Support */
+    .support {
+      text-align: center;
+      margin-top: 40px;
+      padding: 24px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+    }
+
+    .support p { color: #9ca3af; font-size: 14px; margin-bottom: 12px; }
+
+    .btn-support {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: #a5b4fc;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-support:hover {
+      background: rgba(99,102,241,0.25);
+      color: #c4b5fd;
+    }
+
+    @media (max-width: 480px) {
+      .tab { font-size: 12px; padding: 9px 4px; }
+      .tab-icon { font-size: 14px; }
+      .download-card { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Myst<span>VPN</span></div>
+  <p>Инструкция по подключению</p>
+
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('android')">
+        <span class="tab-icon">🤖</span> Android
+      </button>
+      <button class="tab" onclick="switchTab('ios')">
+        <span class="tab-icon">🍎</span> iPhone
+      </button>
+      <button class="tab" onclick="switchTab('windows')">
+        <span class="tab-icon">💻</span> Windows
+      </button>
+      <button class="tab" onclick="switchTab('mac')">
+        <span class="tab-icon">🖥</span> Mac
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+
+  <!-- ANDROID -->
+  <div class="platform active" id="android">
+    <div class="download-card">
+      <div class="app-icon">📡</div>
+      <div class="app-info">
+        <h3>WireGuard</h3>
+        <p>Официальное приложение — работает для всех приложений</p>
+        <a class="btn-download" href="https://play.google.com/store/apps/details?id=com.wireguard.android" target="_blank">
+          ↓ Google Play
+        </a>
+      </div>
+    </div>
+
+    <p class="steps-title">Шаги подключения</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Получи ключ в боте</h4>
+        <p>Открой бота @MysterioVPN_bot → Личный кабинет → нажми <strong>Инструкция</strong>. Бот пришлёт файл <code>MystVPN.conf</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Скачай WireGuard</h4>
+        <p>Установи приложение WireGuard из Google Play (ссылка выше)</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Импортируй файл</h4>
+        <p>Открой WireGuard → нажми <strong>«+»</strong> → <strong>«Импорт из файлов»</strong> → выбери файл <code>MystVPN.conf</code> из Telegram</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Подключись</h4>
+        <p>Нажми переключатель рядом с <strong>MystVPN</strong> → разреши создание VPN → готово!</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>✅ Работает для всех приложений:</strong> Telegram, WhatsApp, TikTok, Instagram и любых других — без дополнительных настроек.
+    </div>
+  </div>
+
+  <!-- IOS -->
+  <div class="platform" id="ios">
+    <div class="download-card">
+      <div class="app-icon">📡</div>
+      <div class="app-info">
+        <h3>WireGuard</h3>
+        <p>Официальное приложение для iPhone и iPad</p>
+        <a class="btn-download" href="https://apps.apple.com/us/app/wireguard/id1441195209" target="_blank">
+          ↓ App Store
+        </a>
+      </div>
+    </div>
+
+    <p class="steps-title">Шаги подключения</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Получи ключ в боте</h4>
+        <p>Открой бота @MysterioVPN_bot → Личный кабинет → нажми <strong>Инструкция</strong>. Бот пришлёт файл <code>MystVPN.conf</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Скачай WireGuard</h4>
+        <p>Установи приложение WireGuard из App Store (ссылка выше)</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Импортируй файл</h4>
+        <p>В Telegram нажми на файл <code>MystVPN.conf</code> → кнопка «Поделиться» → выбери <strong>WireGuard</strong> → нажми «Добавить тоннель»</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Подключись</h4>
+        <p>Открой WireGuard → включи переключатель <strong>MystVPN</strong> → разреши настройки VPN → готово!</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>✅ Работает для всех приложений:</strong> Telegram, WhatsApp, TikTok, Instagram и любых других — без дополнительных настроек.
+    </div>
+  </div>
+
+  <!-- WINDOWS -->
+  <div class="platform" id="windows">
+    <div class="download-card">
+      <div class="app-icon">📡</div>
+      <div class="app-info">
+        <h3>WireGuard для Windows</h3>
+        <p>Официальный клиент от разработчиков WireGuard</p>
+        <a class="btn-download" href="https://download.wireguard.com/windows-client/wireguard-installer.exe" target="_blank">
+          ↓ Скачать .exe
+        </a>
+      </div>
+    </div>
+
+    <p class="steps-title">Шаги подключения</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Получи ключ в боте</h4>
+        <p>Открой бота @MysterioVPN_bot → Личный кабинет → нажми <strong>Инструкция</strong>. Бот пришлёт файл <code>MystVPN.conf</code> — сохрани его</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Установи WireGuard</h4>
+        <p>Скачай и запусти установщик по ссылке выше (требуются права администратора)</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Импортируй туннель</h4>
+        <p>Открой WireGuard → кнопка <strong>«Импортировать туннель(и) из файла»</strong> → выбери скачанный файл <code>MystVPN.conf</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Активируй</h4>
+        <p>Нажми кнопку <strong>«Активировать»</strong> рядом с MystVPN → статус сменится на «Активен»</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAC -->
+  <div class="platform" id="mac">
+    <div class="download-card">
+      <div class="app-icon">📡</div>
+      <div class="app-info">
+        <h3>WireGuard для Mac</h3>
+        <p>Официальное приложение из Mac App Store</p>
+        <a class="btn-download" href="https://apps.apple.com/us/app/wireguard/id1451685025" target="_blank">
+          ↓ Mac App Store
+        </a>
+      </div>
+    </div>
+
+    <p class="steps-title">Шаги подключения</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Получи ключ в боте</h4>
+        <p>Открой бота @MysterioVPN_bot → Личный кабинет → нажми <strong>Инструкция</strong>. Бот пришлёт файл <code>MystVPN.conf</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Установи WireGuard</h4>
+        <p>Установи из Mac App Store по ссылке выше</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Импортируй туннель</h4>
+        <p>Открой WireGuard → <strong>File → Import Tunnel(s) from File</strong> → выбери <code>MystVPN.conf</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Активируй</h4>
+        <p>Нажми кнопку <strong>«Activate»</strong> → разреши добавление конфигурации VPN → готово!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Support -->
+  <div class="support">
+    <p>Возникли вопросы? Напишите нам — поможем</p>
+    <a class="btn-support" href="https://t.me/Myst_support" target="_blank">
+      💬 Написать в поддержку
+    </a>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(platform) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.platform').forEach(p => p.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById(platform).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
