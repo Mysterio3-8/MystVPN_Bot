@@ -27,6 +27,10 @@ jobs:
             echo ">>> Git pull..."
             git pull origin master
 
+            echo ">>> Update guide site..."
+            mkdir -p /var/www/guide
+            cp /root/MystBot/site/index.html /var/www/guide/index.html
+
             echo ">>> Setup WireGuard (idempotent)..."
             ufw allow 51820/udp || true
             # Если WG ещё не настроен — генерируем пароль и хеш автоматически

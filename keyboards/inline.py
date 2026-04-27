@@ -37,7 +37,7 @@ def cabinet_keyboard(
             )])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_renew", lang), callback_data="cabinet_renew"),
-            InlineKeyboardButton(text=i18n.t("btn_guide", lang), url="http://keybest.cc/guide"),
+            InlineKeyboardButton(text=i18n.t("btn_guide", lang), url="https://keybest.cc/guide/"),
         ])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_reset_key", lang), callback_data="cabinet_reset_key"),
