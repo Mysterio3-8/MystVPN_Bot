@@ -63,6 +63,11 @@ MIGRATIONS = [
         "subscriptions.key_rotation_deadline",
         "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS key_rotation_deadline TIMESTAMP DEFAULT NULL",
     ),
+    # ── WireGuard ───────────────────────────────────────────────────────────
+    (
+        "subscriptions.wg_peer_id",
+        "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS wg_peer_id VARCHAR(100) DEFAULT NULL",
+    ),
 ]
 
 

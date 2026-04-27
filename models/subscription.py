@@ -31,6 +31,8 @@ class Subscription(Base):
     new_vpn_key: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     new_sub_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     key_rotation_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # ── WireGuard ─────────────────────────────────────────────────────────────
+    wg_peer_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
     payments: Mapped[list["Payment"]] = relationship(back_populates="subscription")

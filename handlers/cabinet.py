@@ -1,9 +1,9 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, PaymentService, XrayService, i18n
+from services import UserService, SubscriptionService, PaymentService, XrayService, WireGuardService, i18n
 from keyboards import cabinet_keyboard, confirm_cancel_keyboard, back_keyboard, reset_key_keyboard
 from config import PLANS
 
@@ -106,12 +106,37 @@ async def payment_history(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "cabinet_guide")
 async def connection_guide(callback: CallbackQuery) -> None:
+    user_id = callback.from_user.id
     async with AsyncSessionLocal() as session:
-        user = await UserService.get(session, callback.from_user.id)
+        user = await UserService.get(session, user_id)
         lang = user.language if user else "ru"
+        sub = await SubscriptionService.get_active(session, user_id)
     text = i18n.t("connection_guide", lang)
     await callback.message.edit_text(text, reply_markup=back_keyboard("menu_cabinet", lang), parse_mode="HTML")
     await callback.answer()
+    # Автоматически отправить WireGuard файл если подписка активна
+    if sub:
+        wg_peer_id = sub.wg_peer_id
+        if not wg_peer_id:
+            wg_peer_id = await WireGuardService.create_peer(user_id)
+            if wg_peer_id:
+                async with AsyncSessionLocal() as session:
+                    await SubscriptionService.save_wg_peer_id(session, sub.id, wg_peer_id)
+        if wg_peer_id:
+            conf = await WireGuardService.get_config(wg_peer_id)
+            if conf:
+                conf_file = BufferedInputFile(conf.encode(), filename="MystVPN.conf")
+                await callback.message.answer_document(
+                    conf_file,
+                    caption=(
+                        "📡 <b>Твой WireGuard ключ</b>\n\n"
+                        "Импортируй в приложение <b>WireGuard</b>:\n"
+                        "📱 Android / iPhone → «+» → Импорт из файла\n"
+                        "💻 Windows / Mac → Импортировать туннель\n\n"
+                        "✅ Работает для всех приложений без настройки"
+                    ),
+                    parse_mode="HTML",
+                )
 
 
 @router.callback_query(F.data == "cabinet_cancel")
@@ -129,19 +154,22 @@ async def cancel_subscription_confirm(callback: CallbackQuery) -> None:
 @router.callback_query(F.data == "cabinet_cancel_confirmed")
 async def cancel_subscription_confirmed(callback: CallbackQuery) -> None:
     user_id = callback.from_user.id
-    old_key = None
+    sub_snapshot = None
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, user_id)
         lang = user.language if user else "ru"
         sub = await SubscriptionService.get_active(session, user_id)
         if sub:
-            old_key = sub.vpn_key
+            sub_snapshot = {"vpn_key": sub.vpn_key, "wg_peer_id": sub.wg_peer_id}
         cancelled = await SubscriptionService.cancel(session, user_id)
 
     if cancelled:
-        if old_key:
-            client_uuid = XrayService._extract_uuid(old_key)
-            await XrayService.remove_client(user_id, client_uuid)
+        if sub_snapshot:
+            if sub_snapshot["vpn_key"]:
+                client_uuid = XrayService._extract_uuid(sub_snapshot["vpn_key"])
+                await XrayService.remove_client(user_id, client_uuid)
+            if sub_snapshot["wg_peer_id"]:
+                await WireGuardService.delete_peer(sub_snapshot["wg_peer_id"])
         await callback.message.edit_text(
             i18n.t("sub_cancelled", lang),
             reply_markup=back_keyboard("menu_cabinet", lang),

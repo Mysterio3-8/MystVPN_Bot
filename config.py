@@ -46,6 +46,10 @@ class Config:
     # Путь к endpoint подписки. Для 3x-ui: /sub/  Для Remnawave: /rem/sub/
     sub_path: str = field(default_factory=lambda: getenv("SUB_PATH", "/sub/"))
 
+    # ── WireGuard (wg-easy) ──────────────────────────────────────────────────
+    wg_api_url: str = field(default_factory=lambda: getenv("WG_API_URL", "http://wg-easy:51821"))
+    wg_api_password: str = field(default_factory=lambda: getenv("WG_API_PASSWORD", ""))
+
     @property
     def proxy_url(self) -> str:
         if not self.proxy_host or not self.proxy_port:
