@@ -128,12 +128,13 @@ async def process_promo(message: Message, state: FSMContext) -> None:
             sub_id = sub.id
 
     if promo.free_plan:
+        from services import fmt_key
         days = PLANS.get(promo.free_plan, {}).get("days", 30)
-        vpn_key = await XrayService.create_client(message.from_user.id, days)
+        vpn_key, sub_url = await XrayService.create_client(message.from_user.id, days)
         if vpn_key:
             async with AsyncSessionLocal() as s:
-                await SubscriptionService.save_key(s, sub_id, vpn_key)
-            key_text = f"\n\n🔑 <b>VPN-ключ:</b>\n<code>{vpn_key}</code>"
+                await SubscriptionService.save_key(s, sub_id, vpn_key, sub_url)
+            key_text = fmt_key(vpn_key, sub_url)
         else:
             key_text = "\n\n📋 Ключ будет доступен в /cabinet"
         await message.answer(

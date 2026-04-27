@@ -1,7 +1,6 @@
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import Donation
-from models.payment import Payment
 
 
 class DonationService:
