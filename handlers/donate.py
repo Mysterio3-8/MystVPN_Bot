@@ -1,3 +1,4 @@
+import logging
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -5,9 +6,11 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKe
 from database import AsyncSessionLocal
 from services import UserService, PaymentService, DonationService, i18n
 from keyboards import support_keyboard, back_keyboard
+from keyboards.inline import donate_method_keyboard
 from config import config
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 DONATION_AMOUNTS = {
     "donate_bread": 99,
@@ -30,44 +33,14 @@ async def support_menu(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-async def _start_donation(callback_or_message, user_id: int, amount: int, lang: str) -> None:
-    return_url = f"https://t.me/{config.bot_username}"
-    try:
-        result = await PaymentService.create_yookassa_donation(float(amount), user_id, return_url)
-        async with AsyncSessionLocal() as session:
-            await PaymentService.create(
-                session,
-                user_id=user_id,
-                amount=float(amount),
-                currency="RUB",
-                payment_method="yookassa_donate",
-                plan="donation",
-                payment_ext_id=result["id"],
-            )
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплатить картой", url=result["url"])],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_support")],
-        ])
-        text = f"❤️ <b>Поддержка проекта — {amount} ₽</b>\n\nНажмите кнопку для перехода к оплате:"
-        if isinstance(callback_or_message, CallbackQuery):
-            await callback_or_message.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
-        else:
-            await callback_or_message.answer(text, reply_markup=keyboard, parse_mode="HTML")
-    except Exception:
-        err = "❌ Ошибка при создании платежа. Попробуйте позже."
-        if isinstance(callback_or_message, CallbackQuery):
-            await callback_or_message.message.edit_text(err, reply_markup=back_keyboard("menu_support", lang))
-        else:
-            await callback_or_message.answer(err, reply_markup=back_keyboard("menu_support", lang))
-
-
 @router.callback_query(F.data.in_({"donate_bread", "donate_pie", "donate_bbq"}))
 async def donate_fixed(callback: CallbackQuery) -> None:
     amount = DONATION_AMOUNTS[callback.data]
-    async with AsyncSessionLocal() as session:
-        user = await UserService.get(session, callback.from_user.id)
-        lang = user.language if user else "ru"
-    await _start_donation(callback, callback.from_user.id, amount, lang)
+    await callback.message.edit_text(
+        f"❤️ <b>Поддержка проекта — {amount} ₽</b>\n\nВыберите способ оплаты:",
+        reply_markup=donate_method_keyboard(amount),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
@@ -95,7 +68,71 @@ async def donate_custom_amount(message: Message, state: FSMContext) -> None:
         return
     amount = int(text)
     await state.clear()
-    await _start_donation(message, message.from_user.id, amount, lang)
+    await message.answer(
+        f"❤️ <b>Поддержка проекта — {amount} ₽</b>\n\nВыберите способ оплаты:",
+        reply_markup=donate_method_keyboard(amount),
+        parse_mode="HTML",
+    )
+
+
+async def _process_donation(callback: CallbackQuery, user_id: int, amount: int, method: str) -> None:
+    return_url = f"https://t.me/{config.bot_username}"
+    try:
+        if method == "sbp":
+            result = await PaymentService.create_yookassa_sbp_donation(float(amount), user_id, return_url)
+            pay_btn_text = "📱 Открыть СБП"
+        else:
+            result = await PaymentService.create_yookassa_donation(float(amount), user_id, return_url)
+            pay_btn_text = "💳 Оплатить картой"
+
+        async with AsyncSessionLocal() as session:
+            await PaymentService.create(
+                session,
+                user_id=user_id,
+                amount=float(amount),
+                currency="RUB",
+                payment_method=f"yookassa_donate_{method}",
+                plan="donation",
+                payment_ext_id=result["id"],
+            )
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=pay_btn_text, url=result["url"])],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_support")],
+        ])
+        await callback.message.edit_text(
+            f"❤️ <b>Поддержка проекта — {amount} ₽</b>\n\nНажмите кнопку для перехода к оплате:",
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.error(f"Donation error user={user_id} amount={amount} method={method}: {e}", exc_info=True)
+        await callback.message.edit_text(
+            "❌ Ошибка при создании платежа. Попробуйте позже.",
+            reply_markup=back_keyboard("menu_support"),
+        )
+
+
+@router.callback_query(F.data.startswith("donate_pay_card_"))
+async def donate_pay_card(callback: CallbackQuery) -> None:
+    try:
+        amount = int(callback.data.replace("donate_pay_card_", ""))
+    except ValueError:
+        await callback.answer("Неверная сумма", show_alert=True)
+        return
+    await _process_donation(callback, callback.from_user.id, amount, "card")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("donate_pay_sbp_"))
+async def donate_pay_sbp(callback: CallbackQuery) -> None:
+    try:
+        amount = int(callback.data.replace("donate_pay_sbp_", ""))
+    except ValueError:
+        await callback.answer("Неверная сумма", show_alert=True)
+        return
+    await _process_donation(callback, callback.from_user.id, amount, "sbp")
+    await callback.answer()
 
 
 @router.callback_query(F.data == "sponsors_list")

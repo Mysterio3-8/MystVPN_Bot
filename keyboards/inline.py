@@ -105,6 +105,14 @@ def support_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def donate_method_keyboard(amount: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Картой", callback_data=f"donate_pay_card_{amount}")],
+        [InlineKeyboardButton(text="📱 Через СБП", callback_data=f"donate_pay_sbp_{amount}")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_support")],
+    ])
+
+
 def payment_method_keyboard(plan_key: str, lang: str = "ru", is_admin: bool = False) -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="💳 Оплатить картой", callback_data=f"pay_yookassa_{plan_key}")],
