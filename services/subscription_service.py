@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models import Subscription, User
 from config import PLANS, TRIAL_DAYS
 
+KEY_ROTATION_GRACE_HOURS = 24
+
 
 class SubscriptionService:
 
@@ -123,3 +125,44 @@ class SubscriptionService:
             select(Subscription).where(Subscription.status == "active")
         )
         return len(result.scalars().all())
+
+    @staticmethod
+    async def get_all_active(session: AsyncSession) -> list[Subscription]:
+        result = await session.execute(
+            select(Subscription).where(Subscription.status == "active")
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def save_rotation_key(
+        session: AsyncSession,
+        subscription_id: int,
+        new_vpn_key: str,
+        new_sub_url: str | None = None,
+    ) -> None:
+        """Сохраняет новый ключ при ротации. Старый ключ остаётся активным до deadline."""
+        result = await session.execute(
+            select(Subscription).where(Subscription.id == subscription_id)
+        )
+        sub = result.scalar_one_or_none()
+        if sub:
+            sub.new_vpn_key = new_vpn_key
+            sub.new_sub_url = new_sub_url
+            sub.key_rotation_deadline = datetime.utcnow() + timedelta(hours=KEY_ROTATION_GRACE_HOURS)
+            await session.commit()
+
+    @staticmethod
+    async def apply_rotation(session: AsyncSession, subscription_id: int) -> Subscription | None:
+        """Применяет новый ключ: переносит new_* → основные поля, очищает ротацию."""
+        result = await session.execute(
+            select(Subscription).where(Subscription.id == subscription_id)
+        )
+        sub = result.scalar_one_or_none()
+        if sub and sub.new_vpn_key:
+            sub.vpn_key = sub.new_vpn_key
+            sub.sub_url = sub.new_sub_url
+            sub.new_vpn_key = None
+            sub.new_sub_url = None
+            sub.key_rotation_deadline = None
+            await session.commit()
+        return sub

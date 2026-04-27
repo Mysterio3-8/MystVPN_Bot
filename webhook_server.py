@@ -3,9 +3,40 @@ import logging
 from aiohttp import web
 from database import AsyncSessionLocal
 from services import PaymentService, SubscriptionService, XrayService, fmt_key
+from services.donation_service import DonationService
 from config import config, PLANS
 
 logger = logging.getLogger(__name__)
+
+
+async def _handle_donation_succeeded(bot, user_id: int, amount: float, ext_id: str) -> None:
+    """Обрабатывает успешный донат: записывает в donations, уведомляет пользователя."""
+    bot_user = None
+    if bot:
+        try:
+            bot_user = await bot.get_chat(user_id)
+        except Exception:
+            pass
+
+    username = getattr(bot_user, "username", None)
+    first_name = getattr(bot_user, "first_name", None)
+
+    async with AsyncSessionLocal() as session:
+        await DonationService.record_rub(session, user_id, username, first_name, amount)
+
+    if bot:
+        try:
+            await bot.send_message(
+                user_id,
+                f"❤️ <b>Спасибо за поддержку!</b>\n\n"
+                f"Твой донат <b>{amount:.0f} ₽</b> получен.\n"
+                f"Ты помогаешь нам развивать сервис!",
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            logger.warning(f"Cannot notify donor {user_id}: {e}")
+
+    logger.info(f"Webhook: donation {ext_id} recorded for user {user_id}, amount={amount:.2f}")
 
 
 async def handle_yookassa(request: web.Request) -> web.Response:
@@ -42,6 +73,7 @@ async def handle_yookassa(request: web.Request) -> web.Response:
     sub_id = None
     user_id = None
     plan_key = None
+    amount = 0.0
 
     async with AsyncSessionLocal() as session:
         payment = await PaymentService.get_by_ext_id(session, ext_id)
@@ -53,20 +85,30 @@ async def handle_yookassa(request: web.Request) -> web.Response:
             return web.Response(status=200)
 
         await PaymentService.complete(session, payment.id)
-        if payment.subscription_id:
-            await SubscriptionService.activate(session, payment.subscription_id)
 
         sub_id = payment.subscription_id
         user_id = payment.user_id
         plan_key = payment.plan
+        amount = payment.amount
 
+        # Активируем подписку только для реальных планов
+        if sub_id and plan_key != "donation":
+            await SubscriptionService.activate(session, sub_id)
+
+    bot = request.app.get("bot")
+
+    # Донат — отдельная логика, ключ не выдаём
+    if plan_key == "donation":
+        await _handle_donation_succeeded(bot, user_id, amount, ext_id)
+        return web.Response(status=200)
+
+    # Обычная подписка — создаём ключ
     days = PLANS.get(plan_key or "", {}).get("days", 30)
     vpn_key, sub_url = await XrayService.create_client(user_id, days)
     if vpn_key and sub_id:
         async with AsyncSessionLocal() as session:
             await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
 
-    bot = request.app.get("bot")
     if bot and user_id:
         try:
             await bot.send_message(

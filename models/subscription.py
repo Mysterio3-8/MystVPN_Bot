@@ -26,6 +26,11 @@ class Subscription(Base):
     notified_5d: Mapped[bool] = mapped_column(Boolean, default=False)
     notified_1d: Mapped[bool] = mapped_column(Boolean, default=False)
     notified_0d: Mapped[bool] = mapped_column(Boolean, default=False)
+    # ── Ротация ключей (grace period 24ч) ────────────────────────────────────
+    # Новый ключ выдаётся заранее; старый удаляется только после deadline
+    new_vpn_key: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    new_sub_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    key_rotation_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
     payments: Mapped[list["Payment"]] = relationship(back_populates="subscription")

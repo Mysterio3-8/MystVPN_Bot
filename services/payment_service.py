@@ -90,6 +90,21 @@ class PaymentService:
         return {"id": payment.id, "url": payment.confirmation.confirmation_url}
 
     @staticmethod
+    async def create_yookassa_sbp(amount: float, plan_key: str, user_id: int, return_url: str) -> dict:
+        """Создаёт платёж через СБП (Система Быстрых Платежей) в YooKassa."""
+        if not YOOKASSA_AVAILABLE:
+            raise RuntimeError("yookassa не установлен")
+        import uuid
+        payment = YooPayment.create({
+            "amount": {"value": str(amount), "currency": "RUB"},
+            "payment_method_data": {"type": "sbp"},
+            "confirmation": {"type": "redirect", "return_url": return_url},
+            "description": f"MystVPN подписка — {plan_key}",
+            "metadata": {"user_id": user_id, "plan": plan_key},
+        }, uuid.uuid4())
+        return {"id": payment.id, "url": payment.confirmation.confirmation_url}
+
+    @staticmethod
     async def create_yookassa_donation(amount: float, user_id: int, return_url: str) -> dict:
         if not YOOKASSA_AVAILABLE:
             raise RuntimeError("yookassa не установлен")

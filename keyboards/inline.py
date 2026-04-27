@@ -22,9 +22,19 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "ru") -> InlineKeyboa
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def cabinet_keyboard(has_subscription: bool = False, has_key: bool = True, lang: str = "ru") -> InlineKeyboardMarkup:
+def cabinet_keyboard(
+    has_subscription: bool = False,
+    has_key: bool = True,
+    lang: str = "ru",
+    rotation_pending: bool = False,
+) -> InlineKeyboardMarkup:
     buttons = []
     if has_subscription:
+        if rotation_pending:
+            buttons.append([InlineKeyboardButton(
+                text="🔄 Применить новый ключ сейчас",
+                callback_data="cabinet_apply_rotation",
+            )])
         buttons.append([
             InlineKeyboardButton(text=i18n.t("btn_renew", lang), callback_data="cabinet_renew"),
             InlineKeyboardButton(text=i18n.t("btn_guide", lang), callback_data="cabinet_guide"),
@@ -98,6 +108,7 @@ def support_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
 def payment_method_keyboard(plan_key: str, lang: str = "ru", is_admin: bool = False) -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="💳 Оплатить картой", callback_data=f"pay_yookassa_{plan_key}")],
+        [InlineKeyboardButton(text="📱 Оплатить через СБП", callback_data=f"pay_sbp_{plan_key}")],
         [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")],
     ]
     if is_admin:
@@ -181,6 +192,7 @@ def admin_inline_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_grant")],
         [InlineKeyboardButton(text="🎟️ Промокоды", callback_data="admin_promos")],
         [InlineKeyboardButton(text="🔌 Тест XRay/3x-ui", callback_data="admin_test_xray")],
+        [InlineKeyboardButton(text="🔄 Ротация ключей (grace 24ч)", callback_data="admin_rotate_keys")],
         [InlineKeyboardButton(text="◀️ Закрыть", callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -10,7 +10,8 @@ from config import PLANS
 router = Router()
 
 
-async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
+async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool, bool, bool]:
+    """Возвращает (text, has_sub, has_key, rotation_pending)."""
     from services import ReferralService, fmt_key
     async with AsyncSessionLocal() as session:
         sub = await SubscriptionService.get_active(session, user_id)
@@ -22,6 +23,7 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
         plan_name = PLANS.get(sub.plan, {}).get("period", sub.plan) if sub.plan != "trial" else f"Пробный ({sub.plan})"
         trial_mark = " 🎁" if sub.is_trial else ""
         days_left = max(0, (sub.end_date - datetime.utcnow()).days)
+        rotation_pending = bool(sub.new_vpn_key and sub.key_rotation_deadline and sub.key_rotation_deadline > datetime.utcnow())
 
         text = (
             f"👤 <b>Личный кабинет</b>\n\n"
@@ -29,8 +31,19 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
             f"📅 Истекает: <b>{sub.end_date.strftime('%d.%m.%Y')}</b> (осталось {days_left} д.)\n"
         )
 
-        # Subscription URL — главное, сырой ключ не показываем
-        if sub.vpn_key or sub.sub_url:
+        # Баннер ротации — показываем оба ключа
+        if rotation_pending:
+            hours_left = max(0, int((sub.key_rotation_deadline - datetime.utcnow()).total_seconds() // 3600))
+            text += (
+                f"\n\n🔄 <b>Обновление ключей</b>\n"
+                f"⏰ Старый ключ отключится через <b>{hours_left} ч.</b>\n\n"
+                f"<b>Текущий ключ (работает до отключения):</b>"
+                f"{fmt_key(sub.vpn_key, sub.sub_url)}\n\n"
+                f"<b>Новый ключ (переключись сейчас):</b>"
+                f"{fmt_key(sub.new_vpn_key, sub.new_sub_url)}"
+            )
+        elif sub.vpn_key or sub.sub_url:
+            # Subscription URL — главное, сырой ключ не показываем
             text += fmt_key(sub.vpn_key, sub.sub_url)
         else:
             text += "\n\n⚠️ <b>Ключ не выдан</b> — обратись в поддержку: @Myst_support"
@@ -39,7 +52,7 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
             text += f"\n\n🎁 Бонусных дней: <b>{extra_days}</b>"
         if ref_count:
             text += f"\n👥 Рефералов: <b>{ref_count}</b>"
-        return text, True, bool(sub.vpn_key or sub.sub_url)
+        return text, True, bool(sub.vpn_key or sub.sub_url), rotation_pending
 
     text = (
         f"👤 <b>Личный кабинет</b>\n\n"
@@ -47,7 +60,7 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool]:
     )
     if extra_days:
         text += f"\n🎁 Накоплено реф-дней: <b>{extra_days}</b> (применятся после покупки)"
-    return text, False, False
+    return text, False, False, False
 
 
 @router.message(Command("cabinet"))
@@ -55,8 +68,8 @@ async def cmd_cabinet(message: Message) -> None:
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, message.from_user.id)
         lang = user.language if user else "ru"
-    text, has_sub, has_key = await _cabinet_text(message.from_user.id, lang)
-    await message.answer(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang), parse_mode="HTML")
+    text, has_sub, has_key, rotation_pending = await _cabinet_text(message.from_user.id, lang)
+    await message.answer(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang, rotation_pending), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "menu_cabinet")
@@ -64,8 +77,8 @@ async def cabinet_callback(callback: CallbackQuery) -> None:
     async with AsyncSessionLocal() as session:
         user = await UserService.get(session, callback.from_user.id)
         lang = user.language if user else "ru"
-    text, has_sub, has_key = await _cabinet_text(callback.from_user.id, lang)
-    await callback.message.edit_text(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang), parse_mode="HTML")
+    text, has_sub, has_key, rotation_pending = await _cabinet_text(callback.from_user.id, lang)
+    await callback.message.edit_text(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang, rotation_pending), parse_mode="HTML")
     await callback.answer()
 
 
@@ -175,6 +188,38 @@ async def get_key(callback: CallbackQuery) -> None:
             reply_markup=back_keyboard("menu_cabinet", lang),
             parse_mode="HTML",
         )
+
+
+@router.callback_query(F.data == "cabinet_apply_rotation")
+async def apply_rotation(callback: CallbackQuery) -> None:
+    """Пользователь сам переключается на новый ключ досрочно."""
+    user_id = callback.from_user.id
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, user_id)
+        lang = user.language if user else "ru"
+        sub = await SubscriptionService.get_active(session, user_id)
+
+    if not sub or not sub.new_vpn_key:
+        await callback.answer("✅ Ротация уже применена", show_alert=True)
+        return
+
+    old_uuid = XrayService._extract_uuid(sub.vpn_key) if sub.vpn_key else None
+
+    async with AsyncSessionLocal() as session:
+        await SubscriptionService.apply_rotation(session, sub.id)
+
+    # Удаляем старый ключ из 3x-ui
+    if old_uuid:
+        await XrayService.remove_client(user_id, old_uuid)
+
+    await callback.answer("✅ Новый ключ активирован!", show_alert=True)
+
+    # Обновляем кабинет
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, user_id)
+        lang = user.language if user else "ru"
+    text, has_sub, has_key, rotation_pending = await _cabinet_text(user_id, lang)
+    await callback.message.edit_text(text, reply_markup=cabinet_keyboard(has_sub, has_key, lang, rotation_pending), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "cabinet_reset_key")

@@ -132,12 +132,13 @@ async def _check_inbound_health(bot) -> None:
                     if sub_url:
                         sub.sub_url = sub_url
                     reissued += 1
+                    from services.key_helper import fmt_key as _fmt
                     await bot.send_message(
                         sub.user_id,
-                        f"🔄 <b>Ваш VPN-ключ обновлён</b>\n\n"
-                        f"Мы улучшили сервер. Новый ключ:\n\n"
-                        f"<code>{vpn_key}</code>\n\n"
-                        f"Замените старый ключ в приложении.",
+                        f"🔄 <b>Ваш VPN обновлён</b>\n\n"
+                        f"Мы улучшили сервер. Зайди в кабинет — новый ключ уже там."
+                        f"{_fmt(vpn_key, sub_url)}\n\n"
+                        f"Обнови подписку в приложении (v2rayTUN / Hiddify).",
                         parse_mode="HTML",
                     )
             except Exception as e:
@@ -157,20 +158,77 @@ async def _check_inbound_health(bot) -> None:
             pass
 
 
+async def _cleanup_expired_rotations(bot) -> None:
+    """
+    Ищет подписки с истёкшим key_rotation_deadline:
+    удаляет старый ключ из 3x-ui, переносит новый ключ в основные поля,
+    уведомляет пользователя.
+    """
+    from services.xray_service import XrayService
+    from services.subscription_service import SubscriptionService
+    from services.key_helper import fmt_key
+    from sqlalchemy import select, and_
+    from models import Subscription
+
+    now = datetime.utcnow()
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Subscription).where(
+                and_(
+                    Subscription.status == "active",
+                    Subscription.key_rotation_deadline.isnot(None),
+                    Subscription.key_rotation_deadline <= now,
+                    Subscription.new_vpn_key.isnot(None),
+                )
+            )
+        )
+        expired_subs = result.scalars().all()
+
+    for sub in expired_subs:
+        try:
+            old_uuid = XrayService._extract_uuid(sub.vpn_key) if sub.vpn_key else None
+            new_key = sub.new_vpn_key
+            new_sub_url = sub.new_sub_url
+
+            async with AsyncSessionLocal() as session:
+                await SubscriptionService.apply_rotation(session, sub.id)
+
+            if old_uuid:
+                await XrayService.remove_client(sub.user_id, old_uuid)
+
+            try:
+                await bot.send_message(
+                    sub.user_id,
+                    f"🔒 <b>Старый ключ отключён</b>\n\n"
+                    f"Переключись на новый ключ прямо сейчас:"
+                    f"{fmt_key(new_key, new_sub_url)}\n\n"
+                    f"Обнови подписку в приложении (v2rayTUN / Hiddify).",
+                    parse_mode="HTML",
+                )
+            except Exception:
+                pass
+
+            logger.info(f"Rotation cleanup: sub {sub.id} user {sub.user_id} — old key removed")
+        except Exception as e:
+            logger.warning(f"Rotation cleanup error for sub {sub.id}: {e}")
+
+
 async def run_notification_loop(bot) -> None:
     """
     Бесконечный цикл. Запускается через asyncio.create_task() в main.py.
     """
     logger.info("🔔 Notification service started")
-    inbound_check_counter = 0
     while True:
         try:
             await _send_expiry_notifications(bot)
         except Exception as e:
             logger.error(f"Notification loop error: {e}")
 
-        # Проверяем inbound каждый час (раз в цикл, цикл = 6 часов → каждые 6 итераций)
-        # Но CHECK_INTERVAL = 6ч, поэтому watchdog запустим отдельно со своим таймером
+        try:
+            await _cleanup_expired_rotations(bot)
+        except Exception as e:
+            logger.error(f"Rotation cleanup error: {e}")
+
         await asyncio.sleep(CHECK_INTERVAL)
 
 

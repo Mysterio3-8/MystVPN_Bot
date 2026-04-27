@@ -232,6 +232,105 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
 
 
 # ──────────────────────────────────────────────────
+# СБП — создание платежа
+# ──────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("pay_sbp_"))
+async def pay_sbp(callback: CallbackQuery) -> None:
+    plan_key = callback.data.replace("pay_sbp_", "")
+    plan = PLANS.get(plan_key)
+    if not plan:
+        await callback.answer("Неверный тариф", show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    return_url = f"https://t.me/{config.bot_username}"
+
+    # Применяем скидку из Redis (если есть)
+    discount = await PromoService.get_discount(user_id)
+    if discount:
+        pct = discount["percent"]
+        price = round(plan["price"] * (1 - pct / 100), 2)
+        discount_note = f" (скидка {pct}%)"
+    else:
+        price = plan["price"]
+        discount_note = ""
+
+    # Бесплатная активация при 100% скидке
+    if price == 0:
+        async with AsyncSessionLocal() as session:
+            sub = await SubscriptionService.create_pending(session, user_id, plan_key)
+            await SubscriptionService.activate(session, sub.id)
+            await PaymentService.create(
+                session,
+                user_id=user_id,
+                amount=0,
+                currency="RUB",
+                payment_method="promo_free",
+                plan=plan_key,
+                subscription_id=sub.id,
+                payment_ext_id=f"promo_{discount['promo_id']}_{user_id}",
+            )
+            await PromoService.increment_usage(session, discount["promo_id"])
+        await PromoService.clear_discount(user_id)
+        sub_id = sub.id
+        vpn_key, sub_url = await XrayService.create_client(user_id, plan["days"])
+        if vpn_key:
+            async with AsyncSessionLocal() as session:
+                await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
+        await callback.message.edit_text(
+            f"✅ <b>Подписка активирована!</b>\n"
+            f"Тариф: <b>{plan['period']}</b>"
+            f"{fmt_key(vpn_key, sub_url)}",
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    try:
+        result = await PaymentService.create_yookassa_sbp(price, plan_key, user_id, return_url)
+        async with AsyncSessionLocal() as session:
+            sub = await SubscriptionService.create_pending(session, user_id, plan_key)
+            await PaymentService.create(
+                session,
+                user_id=user_id,
+                amount=price,
+                currency="RUB",
+                payment_method="sbp",
+                plan=plan_key,
+                subscription_id=sub.id,
+                payment_ext_id=result["id"],
+            )
+
+        if discount:
+            async with AsyncSessionLocal() as session:
+                await PromoService.increment_usage(session, discount["promo_id"])
+            await PromoService.clear_discount(user_id)
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
+            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_buy")],
+        ])
+        await callback.message.edit_text(
+            f"📱 <b>Оплата через СБП</b>\n\n"
+            f"Тариф: <b>{plan['period']}</b>\n"
+            f"Сумма: <b>{price:.0f} ₽</b>{discount_note}\n\n"
+            f"Нажмите кнопку ниже — откроется приложение вашего банка.\n"
+            f"После оплаты нажмите «Я оплатил»:",
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+    except Exception:
+        await callback.message.edit_text(
+            "❌ Ошибка при создании СБП-платежа. Попробуйте оплату картой.",
+            reply_markup=back_keyboard("menu_buy"),
+        )
+
+    await callback.answer()
+
+
+# ──────────────────────────────────────────────────
 # Подарки через YooKassa
 # ──────────────────────────────────────────────────
 

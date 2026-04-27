@@ -3,7 +3,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
 from services import UserService, SubscriptionService, PaymentService, PromoService, XrayService
 from keyboards import (
@@ -287,6 +287,86 @@ async def admin_promo_delete(callback: CallbackQuery) -> None:
         await PromoService.delete(session, promo_id)
     await callback.answer("✅ Удалён", show_alert=False)
     await _show_promos(callback)
+
+
+@router.callback_query(F.data == "admin_rotate_keys")
+async def admin_rotate_keys_confirm(callback: CallbackQuery) -> None:
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Нет доступа", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        active_count = await SubscriptionService.count_active(session)
+    await callback.message.edit_text(
+        f"🔄 <b>Ротация ключей</b>\n\n"
+        f"Активных подписок: <b>{active_count}</b>\n\n"
+        f"Для каждого пользователя будет создан новый ключ.\n"
+        f"Старый ключ останется работать <b>24 часа</b>, затем отключится.\n\n"
+        f"Пользователи получат уведомление и смогут переключиться досрочно.\n\n"
+        f"⚠️ Запустить ротацию?",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Да, запустить", callback_data="admin_rotate_keys_go"),
+                InlineKeyboardButton(text="❌ Отмена", callback_data="admin_panel"),
+            ]
+        ]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_rotate_keys_go")
+async def admin_rotate_keys_go(callback: CallbackQuery) -> None:
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Нет доступа", show_alert=True)
+        return
+
+    await callback.answer("⏳ Запускаю ротацию...", show_alert=False)
+    await callback.message.edit_text(
+        "⏳ <b>Ротация запущена...</b>\n\nЭто может занять несколько минут.",
+        parse_mode="HTML",
+    )
+
+    from services.key_helper import fmt_key
+
+    success, failed = 0, 0
+    async with AsyncSessionLocal() as session:
+        subs = await SubscriptionService.get_all_active(session)
+
+    for sub in subs:
+        try:
+            days_left = max(1, (sub.end_date - datetime.utcnow()).days)
+            new_key, new_sub_url = await XrayService.create_client(sub.user_id, days_left)
+            if new_key:
+                async with AsyncSessionLocal() as session:
+                    await SubscriptionService.save_rotation_key(session, sub.id, new_key, new_sub_url)
+                try:
+                    await callback.bot.send_message(
+                        sub.user_id,
+                        f"🔄 <b>Важно: обновление VPN-ключей</b>\n\n"
+                        f"Мы обновили инфраструктуру.\n"
+                        f"Твой <b>новый ключ</b> уже доступен в кабинете.\n\n"
+                        f"Старый ключ будет работать ещё <b>24 часа</b>.\n"
+                        f"После — переключись на новый."
+                        f"{fmt_key(new_key, new_sub_url)}\n\n"
+                        f"👉 /cabinet → «Применить новый ключ сейчас»",
+                        parse_mode="HTML",
+                    )
+                except Exception:
+                    pass
+                success += 1
+            else:
+                failed += 1
+        except Exception:
+            failed += 1
+
+    await callback.message.edit_text(
+        f"✅ <b>Ротация завершена</b>\n\n"
+        f"Новые ключи выданы: <b>{success}</b>\n"
+        f"Ошибок: <b>{failed}</b>\n\n"
+        f"Старые ключи отключатся через 24 часа автоматически.",
+        reply_markup=back_keyboard("admin_panel"),
+        parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data == "admin_promo_create")

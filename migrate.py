@@ -50,6 +50,19 @@ MIGRATIONS = [
         "subscriptions.notified_0d",
         "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS notified_0d BOOLEAN NOT NULL DEFAULT FALSE",
     ),
+    # ── Ротация ключей ──────────────────────────────────────────────────────
+    (
+        "subscriptions.new_vpn_key",
+        "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS new_vpn_key VARCHAR(2048) DEFAULT NULL",
+    ),
+    (
+        "subscriptions.new_sub_url",
+        "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS new_sub_url VARCHAR(512) DEFAULT NULL",
+    ),
+    (
+        "subscriptions.key_rotation_deadline",
+        "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS key_rotation_deadline TIMESTAMP DEFAULT NULL",
+    ),
 ]
 
 
