@@ -89,7 +89,8 @@ def gift_tariffs_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def gift_payment_method_keyboard(plan_key: str, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=i18n.t("btn_yookassa", lang), callback_data=f"pay_gift_yookassa_{plan_key}")],
+        [InlineKeyboardButton(text="💳 Оплатить картой", callback_data=f"pay_gift_yookassa_{plan_key}")],
+        [InlineKeyboardButton(text="📱 Оплатить через СБП", callback_data=f"pay_gift_sbp_{plan_key}")],
         [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_gift")],
     ])
 

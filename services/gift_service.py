@@ -24,6 +24,24 @@ class GiftService:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_by_payment_ext_id(session: AsyncSession, ext_id: str) -> GiftCode | None:
+        result = await session.execute(
+            select(GiftCode).where(GiftCode.payment_ext_id == ext_id)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def mark_paid(session: AsyncSession, ext_id: str) -> GiftCode | None:
+        result = await session.execute(
+            select(GiftCode).where(GiftCode.payment_ext_id == ext_id)
+        )
+        gift = result.scalar_one_or_none()
+        if gift:
+            gift.is_paid = True
+            await session.commit()
+        return gift
+
+    @staticmethod
     async def activate(session: AsyncSession, code: str, recipient_id: int) -> GiftCode | None:
         result = await session.execute(
             select(GiftCode).where(GiftCode.code == code)

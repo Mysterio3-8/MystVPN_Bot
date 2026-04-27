@@ -74,22 +74,24 @@ class ReferralService:
         if bot:
             try:
                 if milestone_hit:
-                    msg = (
-                        f"🎉 <b>Поздравляем!</b> Вы привели уже <b>{total_refs}</b> друзей!\n\n"
-                        f"🏆 Бонус за milestone: <b>+{REFERRAL_MILESTONE_DAYS} дней</b> к подписке начислено!\n"
-                        f"Итого накоплено: <b>{referrer.extra_days} дней</b>\n\n"
-                        f"Используй бонус: /cabinet → 🎁 Применить бонус"
-                    )
                     referrer.extra_days += REFERRAL_MILESTONE_DAYS
                     await session.commit()
+                    msg = (
+                        f"🎉 <b>Milestone {total_refs} рефералов!</b>\n\n"
+                        f"🎁 +{REFERRAL_BONUS_DAYS} дней — обычный бонус\n"
+                        f"🏆 +{REFERRAL_MILESTONE_DAYS} дней — milestone бонус\n\n"
+                        f"Итого накоплено: <b>{referrer.extra_days} дней</b>\n\n"
+                        f"Применить: /cabinet → 👥 Рефералы → Применить бонус"
+                    )
                 else:
+                    left = REFERRAL_MILESTONE - (total_refs % REFERRAL_MILESTONE)
                     msg = (
                         f"👥 По вашей ссылке зарегистрировался новый пользователь!\n\n"
-                        f"🎁 Вам начислено <b>+{REFERRAL_BONUS_DAYS} дней</b> к подписке.\n"
-                        f"Всего рефералов: <b>{total_refs}</b> | "
-                        f"До milestone: <b>{REFERRAL_MILESTONE - (total_refs % REFERRAL_MILESTONE)}</b>\n"
-                        f"Накоплено дней: <b>{referrer.extra_days}</b>\n\n"
-                        f"Используй бонус: /cabinet → 🎁 Применить бонус"
+                        f"🎁 Начислено: <b>+{REFERRAL_BONUS_DAYS} дней</b>\n"
+                        f"Всего рефералов: <b>{total_refs}</b>\n"
+                        f"До бонуса ещё: <b>{left}</b> чел.\n"
+                        f"Накоплено: <b>{referrer.extra_days} дней</b>\n\n"
+                        f"Применить: /cabinet → 👥 Рефералы → Применить бонус"
                     )
                 await bot.send_message(referrer_id, msg, parse_mode="HTML")
             except Exception as e:

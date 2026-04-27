@@ -2,7 +2,7 @@ import json
 import logging
 from aiohttp import web
 from database import AsyncSessionLocal
-from services import PaymentService, SubscriptionService, XrayService, fmt_key
+from services import PaymentService, SubscriptionService, XrayService, GiftService, fmt_key
 from services.donation_service import DonationService
 from config import config, PLANS
 
@@ -97,9 +97,33 @@ async def handle_yookassa(request: web.Request) -> web.Response:
 
     bot = request.app.get("bot")
 
-    # Донат — отдельная логика, ключ не выдаём
+    # Донат
     if plan_key == "donation":
         await _handle_donation_succeeded(bot, user_id, amount, ext_id)
+        return web.Response(status=200)
+
+    # Подарок — помечаем оплаченным и отправляем ссылку покупателю
+    if plan_key and payment and getattr(payment, 'payment_method', '') == "yookassa_gift":
+        async with AsyncSessionLocal() as session:
+            gift = await GiftService.get_by_payment_ext_id(session, ext_id)
+            if gift and not gift.is_paid:
+                gift.is_paid = True
+                await session.commit()
+            if gift and bot:
+                from config import config as _cfg
+                gift_link = f"https://t.me/{_cfg.bot_username}?start=gift_{gift.code}"
+                try:
+                    await bot.send_message(
+                        user_id,
+                        f"✅ <b>Оплата подарка получена!</b>\n\n"
+                        f"🎁 Вот ссылка — отправь другу:\n\n"
+                        f"<code>{gift_link}</code>\n\n"
+                        f"Друг перейдёт и получит VPN автоматически.",
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.warning(f"Cannot send gift link to {user_id}: {e}")
+        logger.info(f"Webhook: gift payment {ext_id} confirmed for user {user_id}")
         return web.Response(status=200)
 
     # Обычная подписка — создаём ключ

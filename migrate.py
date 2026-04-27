@@ -68,6 +68,15 @@ MIGRATIONS = [
         "subscriptions.wg_peer_id",
         "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS wg_peer_id VARCHAR(100) DEFAULT NULL",
     ),
+    # ── Gift security ───────────────────────────────────────────────────────
+    (
+        "gift_codes.is_paid",
+        "ALTER TABLE gift_codes ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
+    (
+        "gift_codes.payment_ext_id",
+        "ALTER TABLE gift_codes ADD COLUMN IF NOT EXISTS payment_ext_id VARCHAR(128) DEFAULT NULL",
+    ),
 ]
 
 

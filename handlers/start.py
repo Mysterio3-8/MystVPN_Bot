@@ -46,6 +46,9 @@ async def _activate_gift(message: Message, code: str) -> None:
         if not gift:
             await message.answer(i18n.t("gift_invalid", lang))
             return
+        if not gift.is_paid:
+            await message.answer("⏳ <b>Подарок ещё не оплачен.</b>\n\nОжидаем подтверждения платежа. Попробуй позже.", parse_mode="HTML")
+            return
         if gift.is_used:
             await message.answer(i18n.t("gift_already_used", lang))
             return

@@ -400,6 +400,14 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
         result = await PaymentService.create_yookassa_payment(plan["price"], plan_key, user_id, return_url)
         async with AsyncSessionLocal() as session:
             gift = await GiftService.create(session, plan_key, user_id)
+            # Привязываем платёж к подарку — ссылка выдастся только после оплаты через webhook
+            from sqlalchemy import select as _select
+            from models import GiftCode as _GiftCode
+            g = await session.execute(_select(_GiftCode).where(_GiftCode.code == gift.code))
+            g = g.scalar_one_or_none()
+            if g:
+                g.payment_ext_id = result["id"]
+                await session.commit()
             await PaymentService.create(
                 session,
                 user_id=user_id,
@@ -409,16 +417,15 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
                 plan=plan_key,
                 payment_ext_id=result["id"],
             )
-        bot_username = config.bot_username
-        gift_link = f"https://t.me/{bot_username}?start=gift_{gift.code}"
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💳 Оплатить картой", url=result["url"])],
+            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_gift_{result['id']}")],
             [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_gift")],
         ])
         await callback.message.edit_text(
             f"🎁 <b>Подарок MystVPN — {plan['period']}</b>\n\n"
             f"Сумма: <b>{plan['price']:.0f} ₽</b>\n\n"
-            f"После оплаты отправьте другу ссылку:\n<code>{gift_link}</code>",
+            "После оплаты мы автоматически пришлём ссылку-подарок в этот чат.",
             reply_markup=keyboard,
             parse_mode="HTML",
         )
@@ -428,6 +435,97 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
             reply_markup=back_keyboard("menu_gift"),
         )
     await callback.answer()
+
+
+@router.callback_query(F.data.startswith("pay_gift_sbp_"))
+async def pay_gift_sbp(callback: CallbackQuery) -> None:
+    plan_key = callback.data.replace("pay_gift_sbp_", "")
+    plan = PLANS.get(plan_key)
+    if not plan:
+        await callback.answer("Неверный тариф", show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    return_url = f"https://t.me/{config.bot_username}"
+
+    import logging as _log
+    try:
+        result = await PaymentService.create_yookassa_sbp(plan["price"], plan_key, user_id, return_url)
+    except Exception as sbp_err:
+        _log.getLogger(__name__).error(f"Gift SBP error user={user_id}: {sbp_err}", exc_info=True)
+        await callback.message.edit_text(
+            "❌ Ошибка при создании СБП-платежа. Попробуйте оплату картой.",
+            reply_markup=back_keyboard("menu_gift"),
+        )
+        await callback.answer()
+        return
+
+    async with AsyncSessionLocal() as session:
+        gift = await GiftService.create(session, plan_key, user_id)
+        from sqlalchemy import select as _select
+        from models import GiftCode as _GiftCode
+        g = await session.execute(_select(_GiftCode).where(_GiftCode.code == gift.code))
+        g = g.scalar_one_or_none()
+        if g:
+            g.payment_ext_id = result["id"]
+            await session.commit()
+        await PaymentService.create(
+            session,
+            user_id=user_id,
+            amount=plan["price"],
+            currency="RUB",
+            payment_method="yookassa_gift",
+            plan=plan_key,
+            payment_ext_id=result["id"],
+        )
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
+        [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_gift_{result['id']}")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_gift")],
+    ])
+    await callback.message.edit_text(
+        f"🎁 <b>Подарок MystVPN — {plan['period']}</b>\n\n"
+        f"Сумма: <b>{plan['price']:.0f} ₽</b>\n\n"
+        "После оплаты через СБП мы пришлём ссылку-подарок в этот чат.",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("check_gift_"))
+async def check_gift_payment(callback: CallbackQuery) -> None:
+    ext_id = callback.data.replace("check_gift_", "")
+    try:
+        status = await PaymentService.check_yookassa(ext_id)
+    except Exception:
+        await callback.answer("❌ Ошибка проверки платежа", show_alert=True)
+        return
+
+    if status == "succeeded":
+        async with AsyncSessionLocal() as session:
+            payment = await PaymentService.get_by_ext_id(session, ext_id)
+            if payment and payment.status != "completed":
+                await PaymentService.complete(session, payment.id)
+            gift = await GiftService.get_by_payment_ext_id(session, ext_id)
+            if gift and not gift.is_paid:
+                gift.is_paid = True
+                await session.commit()
+        if gift:
+            gift_link = f"https://t.me/{config.bot_username}?start=gift_{gift.code}"
+            await callback.message.edit_text(
+                f"✅ <b>Оплата получена!</b>\n\n"
+                f"🎁 Вот ссылка-подарок — отправь другу:\n\n"
+                f"<code>{gift_link}</code>\n\n"
+                f"Друг перейдёт по ссылке и получит VPN автоматически.",
+                parse_mode="HTML",
+            )
+        await callback.answer()
+    elif status == "pending":
+        await callback.answer("⏳ Платёж ещё не завершён", show_alert=True)
+    else:
+        await callback.answer(f"❌ Статус: {status}", show_alert=True)
 
 
 # ──────────────────────────────────────────────────
