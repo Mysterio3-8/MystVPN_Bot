@@ -21,6 +21,13 @@ jobs:
             echo ">>> Git pull..."
             git pull origin master
 
+            echo ">>> Setup WireGuard (idempotent)..."
+            ufw allow 51820/udp || true
+            # wg-easy нужен bcrypt хеш пароля — если не задан, пропускаем
+            if grep -q "WG_PASSWORD_HASH" .env && ! grep -q 'WG_PASSWORD_HASH=$' .env; then
+              docker compose up -d wg-easy || true
+            fi
+
             echo ">>> Rebuild & restart bot..."
             docker compose up -d --build bot
 
