@@ -287,46 +287,50 @@ async def pay_sbp(callback: CallbackQuery) -> None:
         await callback.answer()
         return
 
+    import logging as _log
     try:
         result = await PaymentService.create_yookassa_sbp(price, plan_key, user_id, return_url)
-        async with AsyncSessionLocal() as session:
-            sub = await SubscriptionService.create_pending(session, user_id, plan_key)
-            await PaymentService.create(
-                session,
-                user_id=user_id,
-                amount=price,
-                currency="RUB",
-                payment_method="sbp",
-                plan=plan_key,
-                subscription_id=sub.id,
-                payment_ext_id=result["id"],
-            )
-
-        if discount:
-            async with AsyncSessionLocal() as session:
-                await PromoService.increment_usage(session, discount["promo_id"])
-            await PromoService.clear_discount(user_id)
-
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
-            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_buy")],
-        ])
-        await callback.message.edit_text(
-            f"📱 <b>Оплата через СБП</b>\n\n"
-            f"Тариф: <b>{plan['period']}</b>\n"
-            f"Сумма: <b>{price:.0f} ₽</b>{discount_note}\n\n"
-            f"Нажмите кнопку ниже — откроется приложение вашего банка.\n"
-            f"После оплаты нажмите «Я оплатил»:",
-            reply_markup=keyboard,
-            parse_mode="HTML",
-        )
-    except Exception:
+    except Exception as sbp_err:
+        _log.getLogger(__name__).error(f"SBP create error user={user_id} plan={plan_key}: {sbp_err}", exc_info=True)
         await callback.message.edit_text(
             "❌ Ошибка при создании СБП-платежа. Попробуйте оплату картой.",
             reply_markup=back_keyboard("menu_buy"),
         )
+        await callback.answer()
+        return
 
+    async with AsyncSessionLocal() as session:
+        sub = await SubscriptionService.create_pending(session, user_id, plan_key)
+        await PaymentService.create(
+            session,
+            user_id=user_id,
+            amount=price,
+            currency="RUB",
+            payment_method="sbp",
+            plan=plan_key,
+            subscription_id=sub.id,
+            payment_ext_id=result["id"],
+        )
+
+    if discount:
+        async with AsyncSessionLocal() as session:
+            await PromoService.increment_usage(session, discount["promo_id"])
+        await PromoService.clear_discount(user_id)
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
+        [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_buy")],
+    ])
+    await callback.message.edit_text(
+        f"📱 <b>Оплата через СБП</b>\n\n"
+        f"Тариф: <b>{plan['period']}</b>\n"
+        f"Сумма: <b>{price:.0f} ₽</b>{discount_note}\n\n"
+        f"Нажмите кнопку ниже — откроется приложение вашего банка.\n"
+        f"После оплаты нажмите «Я оплатил»:",
+        reply_markup=keyboard,
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
