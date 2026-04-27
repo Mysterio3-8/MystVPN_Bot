@@ -15,8 +15,9 @@ class SubscriptionService:
             select(Subscription)
             .where(Subscription.user_id == user_id, Subscription.status == "active")
             .order_by(Subscription.end_date.desc())
+            .limit(1)
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     @staticmethod
     async def get_all_for_user(session: AsyncSession, user_id: int) -> list[Subscription]:
