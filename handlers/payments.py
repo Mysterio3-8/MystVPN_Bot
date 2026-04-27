@@ -183,7 +183,8 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
         payment = await PaymentService.get_by_ext_id(session, ext_id)
         if payment and payment.status == "completed":
             sub = await SubscriptionService.get_active(session, callback.from_user.id)
-            key_text = f"\n\n🔑 <b>VPN-ключ:</b>\n<code>{sub.vpn_key}</code>" if sub and sub.vpn_key else ""
+            from services import fmt_key
+            key_text = fmt_key(sub.vpn_key if sub else None, sub.sub_url if sub else None) if sub else ""
             await callback.message.edit_text(
                 f"✅ <b>Подписка уже активирована!</b>{key_text}\n\n📋 Детали: /cabinet",
                 parse_mode="HTML",
