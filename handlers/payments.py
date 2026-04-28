@@ -1,42 +1,14 @@
 from aiogram import Router, F, Bot
 from aiogram.filters import Filter
 from aiogram.types import (
-    CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
-    Message, BufferedInputFile, LabeledPrice, PreCheckoutQuery,
+    CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message,
 )
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, PaymentService, GiftService, XrayService, WireGuardService, PromoService, fmt_key, i18n
+from services import UserService, SubscriptionService, PaymentService, GiftService, XrayService, PromoService, fmt_key, i18n
 from keyboards import back_keyboard
-from config import PLANS, STARS_PRICES, config
+from config import PLANS, config
 
 router = Router()
-
-
-async def _send_wg_config(callback: CallbackQuery, user_id: int, sub_id: int, wg_peer_id: str | None) -> None:
-    """Создать WireGuard пир (если нет) и отправить .conf файл пользователю."""
-    peer_id = wg_peer_id
-    if not peer_id:
-        peer_id = await WireGuardService.create_peer(user_id)
-        if peer_id:
-            async with AsyncSessionLocal() as session:
-                await SubscriptionService.save_wg_peer_id(session, sub_id, peer_id)
-    if not peer_id:
-        return
-    conf = await WireGuardService.get_config(peer_id)
-    if not conf:
-        return
-    conf_file = BufferedInputFile(conf.encode(), filename=f"MystVPN.conf")
-    await callback.message.answer_document(
-        conf_file,
-        caption=(
-            "📡 <b>Твой VPN-ключ (WireGuard)</b>\n\n"
-            "Импортируй файл в приложение:\n"
-            "📱 <b>Android / iPhone</b> → <b>WireGuard</b> (официальное приложение) → «+» → Импорт\n"
-            "💻 <b>Windows / Mac</b> → WireGuard → «Импортировать туннель»\n\n"
-            "✅ Работает для всех приложений без настройки"
-        ),
-        parse_mode="HTML",
-    )
 
 
 # ──────────────────────────────────────────────────
@@ -80,10 +52,6 @@ async def pay_admin_free(callback: CallbackQuery) -> None:
     if vpn_key:
         async with AsyncSessionLocal() as session:
             await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
-    wg_peer_id = await WireGuardService.create_peer(user_id)
-    if wg_peer_id:
-        async with AsyncSessionLocal() as session:
-            await SubscriptionService.save_wg_peer_id(session, sub_id, wg_peer_id)
 
     await callback.message.edit_text(
         f"👑 <b>Подписка активирована (Админ)</b>\n"
@@ -91,7 +59,6 @@ async def pay_admin_free(callback: CallbackQuery) -> None:
         f"{fmt_key(vpn_key, sub_url)}",
         parse_mode="HTML",
     )
-    await _send_wg_config(callback, user_id, sub_id, wg_peer_id)
     await callback.answer("✅ Активировано бесплатно", show_alert=True)
 
 
@@ -110,7 +77,6 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
     user_id = callback.from_user.id
     return_url = f"https://t.me/{config.bot_username}"
 
-    # Применяем скидку из Redis (если есть)
     discount = await PromoService.get_discount(user_id)
     if discount:
         pct = discount["percent"]
@@ -120,7 +86,6 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
         price = plan["price"]
         discount_note = ""
 
-    # Бесплатная активация при 100% скидке
     if price == 0:
         async with AsyncSessionLocal() as session:
             sub = await SubscriptionService.create_pending(session, user_id, plan_key)
@@ -142,17 +107,12 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
         if vpn_key:
             async with AsyncSessionLocal() as session:
                 await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
-        wg_peer_id = await WireGuardService.create_peer(user_id)
-        if wg_peer_id:
-            async with AsyncSessionLocal() as session:
-                await SubscriptionService.save_wg_peer_id(session, sub_id, wg_peer_id)
         await callback.message.edit_text(
             f"✅ <b>Подписка активирована!</b>\n"
             f"Тариф: <b>{plan['period']}</b>"
             f"{fmt_key(vpn_key, sub_url)}",
             parse_mode="HTML",
         )
-        await _send_wg_config(callback, user_id, sub_id, wg_peer_id)
         await callback.answer()
         return
 
@@ -171,7 +131,6 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
                 payment_ext_id=result["id"],
             )
 
-        # Применяем промокод: инкрементируем использование и очищаем Redis
         if discount:
             async with AsyncSessionLocal() as session:
                 await PromoService.increment_usage(session, discount["promo_id"])
@@ -215,7 +174,6 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
         await callback.answer("Неверные данные", show_alert=True)
         return
 
-    # Проверяем: платёж уже обработан? (идемпотентность)
     async with AsyncSessionLocal() as session:
         payment = await PaymentService.get_by_ext_id(session, ext_id)
         if payment and payment.status == "completed":
@@ -253,10 +211,6 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
         if vpn_key:
             async with AsyncSessionLocal() as session:
                 await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
-        wg_peer_id = await WireGuardService.create_peer(user_id)
-        if wg_peer_id:
-            async with AsyncSessionLocal() as session:
-                await SubscriptionService.save_wg_peer_id(session, sub_id, wg_peer_id)
 
         await callback.message.edit_text(
             f"✅ <b>Оплата прошла!</b>\n"
@@ -264,7 +218,6 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
             f"{fmt_key(vpn_key, sub_url)}",
             parse_mode="HTML",
         )
-        await _send_wg_config(callback, user_id, sub_id, wg_peer_id)
     elif status == "pending":
         await callback.answer("⏳ Платёж ещё не завершён", show_alert=True)
     else:
@@ -288,7 +241,6 @@ async def pay_sbp(callback: CallbackQuery) -> None:
     user_id = callback.from_user.id
     return_url = f"https://t.me/{config.bot_username}"
 
-    # Применяем скидку из Redis (если есть)
     discount = await PromoService.get_discount(user_id)
     if discount:
         pct = discount["percent"]
@@ -298,7 +250,6 @@ async def pay_sbp(callback: CallbackQuery) -> None:
         price = plan["price"]
         discount_note = ""
 
-    # Бесплатная активация при 100% скидке
     if price == 0:
         async with AsyncSessionLocal() as session:
             sub = await SubscriptionService.create_pending(session, user_id, plan_key)
@@ -320,17 +271,12 @@ async def pay_sbp(callback: CallbackQuery) -> None:
         if vpn_key:
             async with AsyncSessionLocal() as session:
                 await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
-        wg_peer_id = await WireGuardService.create_peer(user_id)
-        if wg_peer_id:
-            async with AsyncSessionLocal() as session:
-                await SubscriptionService.save_wg_peer_id(session, sub_id, wg_peer_id)
         await callback.message.edit_text(
             f"✅ <b>Подписка активирована!</b>\n"
             f"Тариф: <b>{plan['period']}</b>"
             f"{fmt_key(vpn_key, sub_url)}",
             parse_mode="HTML",
         )
-        await _send_wg_config(callback, user_id, sub_id, wg_peer_id)
         await callback.answer()
         return
 
@@ -400,7 +346,6 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
         result = await PaymentService.create_yookassa_payment(plan["price"], plan_key, user_id, return_url)
         async with AsyncSessionLocal() as session:
             gift = await GiftService.create(session, plan_key, user_id)
-            # Привязываем платёж к подарку — ссылка выдастся только после оплаты через webhook
             from sqlalchemy import select as _select
             from models import GiftCode as _GiftCode
             g = await session.execute(_select(_GiftCode).where(_GiftCode.code == gift.code))
@@ -526,100 +471,6 @@ async def check_gift_payment(callback: CallbackQuery) -> None:
         await callback.answer("⏳ Платёж ещё не завершён", show_alert=True)
     else:
         await callback.answer(f"❌ Статус: {status}", show_alert=True)
-
-
-# ──────────────────────────────────────────────────
-# Telegram Stars — создание инвойса
-# ──────────────────────────────────────────────────
-
-@router.callback_query(F.data.startswith("pay_stars_"))
-async def pay_stars(callback: CallbackQuery, bot: Bot) -> None:
-    plan_key = callback.data.replace("pay_stars_", "")
-    plan = PLANS.get(plan_key)
-    stars = STARS_PRICES.get(plan_key)
-    if not plan or not stars:
-        await callback.answer("Неверный тариф", show_alert=True)
-        return
-
-    user_id = callback.from_user.id
-    async with AsyncSessionLocal() as session:
-        sub = await SubscriptionService.create_pending(session, user_id, plan_key)
-
-    await bot.send_invoice(
-        chat_id=user_id,
-        title=f"MystVPN — {plan['period']}",
-        description=f"VPN подписка на {plan['period']}. Работает на всех устройствах.",
-        payload=f"stars_{plan_key}_{user_id}_{sub.id}",
-        currency="XTR",
-        prices=[LabeledPrice(label=f"MystVPN {plan['period']}", amount=stars)],
-    )
-    await callback.answer()
-    await callback.message.edit_text(
-        f"⭐ <b>Оплата через Telegram Stars</b>\n\nТариф: <b>{plan['period']}</b>\n"
-        f"Сумма: <b>{stars} Stars</b>\n\nИнвойс отправлен ↑",
-        parse_mode="HTML",
-    )
-
-
-@router.pre_checkout_query()
-async def pre_checkout(query: PreCheckoutQuery) -> None:
-    await query.answer(ok=True)
-
-
-@router.message(F.successful_payment)
-async def successful_payment_stars(message: Message) -> None:
-    payload = message.successful_payment.invoice_payload
-    try:
-        # payload: "stars_{plan_key}_{user_id}_{sub_id}"
-        # plan_key может содержать "_" (1_month, 3_months), парсим с конца
-        parts = payload.split("_")
-        sub_id = int(parts[-1])
-        user_id = int(parts[-2])
-        plan_key = "_".join(parts[1:-2])
-    except Exception:
-        return
-
-    plan = PLANS.get(plan_key)
-    if not plan:
-        return
-
-    stars_amount = message.successful_payment.total_amount
-    async with AsyncSessionLocal() as session:
-        await SubscriptionService.activate(session, sub_id)
-        await PaymentService.create(
-            session,
-            user_id=user_id,
-            amount=float(stars_amount),
-            currency="XTR",
-            payment_method="telegram_stars",
-            plan=plan_key,
-            subscription_id=sub_id,
-            payment_ext_id=f"stars_{message.successful_payment.telegram_payment_charge_id}",
-        )
-
-    vpn_key, sub_url = await XrayService.create_client(user_id, plan["days"])
-    if vpn_key:
-        async with AsyncSessionLocal() as session:
-            await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)
-    wg_peer_id = await WireGuardService.create_peer(user_id)
-    if wg_peer_id:
-        async with AsyncSessionLocal() as session:
-            await SubscriptionService.save_wg_peer_id(session, sub_id, wg_peer_id)
-
-    await message.answer(
-        f"✅ <b>Оплата Stars прошла!</b>\nПодписка активирована."
-        f"{fmt_key(vpn_key, sub_url)}",
-        parse_mode="HTML",
-    )
-    # WG конфиг отправляем через document
-    if wg_peer_id:
-        conf = await WireGuardService.get_config(wg_peer_id)
-        if conf:
-            await message.answer_document(
-                BufferedInputFile(conf.encode(), filename="MystVPN.conf"),
-                caption="📡 <b>WireGuard ключ</b> — импортируй в приложение WireGuard",
-                parse_mode="HTML",
-            )
 
 
 # ──────────────────────────────────────────────────

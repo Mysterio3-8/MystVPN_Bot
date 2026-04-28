@@ -117,15 +117,11 @@ def donate_method_keyboard(amount: int) -> InlineKeyboardMarkup:
 
 
 def payment_method_keyboard(plan_key: str, lang: str = "ru", is_admin: bool = False) -> InlineKeyboardMarkup:
-    from config import STARS_PRICES
-    stars = STARS_PRICES.get(plan_key)
     buttons = [
         [InlineKeyboardButton(text="💳 Оплатить картой", callback_data=f"pay_yookassa_{plan_key}")],
         [InlineKeyboardButton(text="📱 Оплатить через СБП", callback_data=f"pay_sbp_{plan_key}")],
+        [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")],
     ]
-    if stars:
-        buttons.append([InlineKeyboardButton(text=f"⭐ Оплатить {stars} Stars", callback_data=f"pay_stars_{plan_key}")])
-    buttons.append([InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")])
     if is_admin:
         buttons.insert(0, [InlineKeyboardButton(
             text="👑 Активировать бесплатно (Админ)",

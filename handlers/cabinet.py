@@ -1,9 +1,9 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, BufferedInputFile
+from aiogram.types import Message, CallbackQuery
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, PaymentService, XrayService, WireGuardService, i18n
+from services import UserService, SubscriptionService, PaymentService, XrayService, i18n
 from keyboards import cabinet_keyboard, confirm_cancel_keyboard, back_keyboard, reset_key_keyboard
 from config import PLANS
 
@@ -135,16 +135,13 @@ async def cancel_subscription_confirmed(callback: CallbackQuery) -> None:
         lang = user.language if user else "ru"
         sub = await SubscriptionService.get_active(session, user_id)
         if sub:
-            sub_snapshot = {"vpn_key": sub.vpn_key, "wg_peer_id": sub.wg_peer_id}
+            sub_snapshot = {"vpn_key": sub.vpn_key}
         cancelled = await SubscriptionService.cancel(session, user_id)
 
     if cancelled:
-        if sub_snapshot:
-            if sub_snapshot["vpn_key"]:
-                client_uuid = XrayService._extract_uuid(sub_snapshot["vpn_key"])
-                await XrayService.remove_client(user_id, client_uuid)
-            if sub_snapshot["wg_peer_id"]:
-                await WireGuardService.delete_peer(sub_snapshot["wg_peer_id"])
+        if sub_snapshot and sub_snapshot["vpn_key"]:
+            client_uuid = XrayService._extract_uuid(sub_snapshot["vpn_key"])
+            await XrayService.remove_client(user_id, client_uuid)
         await callback.message.edit_text(
             i18n.t("sub_cancelled", lang),
             reply_markup=back_keyboard("menu_cabinet", lang),

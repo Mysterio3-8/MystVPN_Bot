@@ -71,38 +71,11 @@ services:
     networks:
       - mystvpn
 
-  wg-easy:
-    image: ghcr.io/wg-easy/wg-easy:14
-    container_name: wg-easy
-    environment:
-      - LANG=en
-      - WG_HOST=${WG_HOST:-77.110.96.77}
-      - PASSWORD_HASH=${WG_PASSWORD_HASH}
-      - WG_DEFAULT_DNS=1.1.1.1,1.0.0.1
-      - WG_ALLOWED_IPS=0.0.0.0/0,::/0
-      - WG_DEFAULT_ADDRESS=10.8.0.x
-      - PORT=51821
-    volumes:
-      - wireguard_data:/etc/wireguard
-    ports:
-      - "51820:51820/udp"
-      - "127.0.0.1:51821:51821/tcp"
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: unless-stopped
-    networks:
-      - mystvpn
-
 volumes:
   postgres_data:
   redis_data:
   certbot_certs:
   certbot_www:
-  wireguard_data:
 
 networks:
   mystvpn:

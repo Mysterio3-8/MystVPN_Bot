@@ -159,16 +159,6 @@ class SubscriptionService:
             await session.commit()
 
     @staticmethod
-    async def save_wg_peer_id(session: AsyncSession, subscription_id: int, wg_peer_id: str) -> None:
-        result = await session.execute(
-            select(Subscription).where(Subscription.id == subscription_id)
-        )
-        sub = result.scalar_one_or_none()
-        if sub:
-            sub.wg_peer_id = wg_peer_id
-            await session.commit()
-
-    @staticmethod
     async def apply_rotation(session: AsyncSession, subscription_id: int) -> Subscription | None:
         """Применяет новый ключ: переносит new_* → основные поля, очищает ротацию."""
         result = await session.execute(
