@@ -394,7 +394,11 @@ class XrayService:
                 "security": "reality",
                 "realitySettings": {
                     "show": False,
+                    # ВАЖНО: оба поля нужны — старые версии xray-core читают `dest`,
+                    # новые (26.x+) читают `target`. Если не задать оба, xray
+                    # упадёт с "please fill in a valid value for target".
                     "dest": dest,
+                    "target": dest,
                     "xver": 0,
                     "serverNames": [sni],
                     "privateKey": private_key,
