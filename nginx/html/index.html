@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MystVPN — приватный VPN для России</title>
+<meta name="description" content="MystVPN — быстрый приватный VPN на VLESS Reality. Работает в России без блокировок.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0a0a0f;
+    color: #e8e8ea;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  header {
+    padding: 28px 0;
+    border-bottom: 1px solid #1a1a22;
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+  .logo span { color: #6366f1; }
+  .nav-links a {
+    color: #a0a0a8;
+    text-decoration: none;
+    margin-left: 28px;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: #fff; }
+  .cta-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff !important;
+    padding: 11px 22px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+  }
+
+  /* Hero */
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero h1 {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    color: #fff;
+    margin-bottom: 20px;
+    line-height: 1.1;
+  }
+  .hero h1 .gradient {
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    font-size: 19px;
+    color: #a0a0a8;
+    max-width: 640px;
+    margin: 0 auto 40px;
+  }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 50px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: #707078;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Features */
+  .section { padding: 80px 0; }
+  .section h2 {
+    font-size: 38px;
+    font-weight: 800;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 16px;
+    letter-spacing: -0.8px;
+  }
+  .section .subtitle {
+    text-align: center;
+    color: #a0a0a8;
+    font-size: 17px;
+    max-width: 520px;
+    margin: 0 auto 56px;
+  }
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .feature {
+    background: #14141c;
+    padding: 28px;
+    border-radius: 14px;
+    border: 1px solid #1f1f2a;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature:hover { border-color: #2a2a3a; transform: translateY(-2px); }
+  .feature-icon {
+    font-size: 32px;
+    margin-bottom: 14px;
+  }
+  .feature h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .feature p {
+    color: #a0a0a8;
+    font-size: 15px;
+  }
+
+  /* Steps */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .step {
+    background: #14141c;
+    padding: 28px;
+    border-radius: 14px;
+    border: 1px solid #1f1f2a;
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -14px;
+    left: 24px;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .step h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin: 12px 0 8px;
+  }
+  .step p {
+    color: #a0a0a8;
+    font-size: 14px;
+  }
+
+  /* Platforms */
+  .platforms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .platform {
+    background: #14141c;
+    padding: 24px;
+    border-radius: 14px;
+    border: 1px solid #1f1f2a;
+    text-align: center;
+  }
+  .platform-icon { font-size: 36px; margin-bottom: 10px; }
+  .platform h3 { color: #fff; font-size: 16px; margin-bottom: 6px; }
+  .platform p { color: #a0a0a8; font-size: 13px; }
+
+  /* FAQ */
+  .faq { max-width: 720px; margin: 0 auto; }
+  .faq-item {
+    background: #14141c;
+    border: 1px solid #1f1f2a;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 20px 24px;
+  }
+  .faq-item h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .faq-item p { color: #a0a0a8; font-size: 15px; }
+
+  /* CTA */
+  .cta-section {
+    text-align: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
+    border-radius: 20px;
+    padding: 60px 30px;
+    margin: 40px 0 80px;
+    border: 1px solid #2a2a3a;
+  }
+  .cta-section h2 { margin-bottom: 16px; }
+  .cta-section p { color: #a0a0a8; margin-bottom: 28px; font-size: 17px; }
+
+  footer {
+    border-top: 1px solid #1a1a22;
+    padding: 28px 0;
+    text-align: center;
+    color: #707078;
+    font-size: 14px;
+  }
+  footer a { color: #a0a0a8; text-decoration: none; margin: 0 12px; }
+  footer a:hover { color: #fff; }
+
+  @media (max-width: 720px) {
+    .hero h1 { font-size: 38px; }
+    .hero p { font-size: 16px; }
+    .nav-links { display: none; }
+    .nav-links.cta-only { display: block; }
+    .section { padding: 56px 0; }
+    .section h2 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <nav class="nav">
+      <div class="logo">Myst<span>VPN</span></div>
+      <div class="nav-links">
+        <a href="#features">Возможности</a>
+        <a href="#how">Как подключиться</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://t.me/MysterioVPN_bot" class="cta-btn">Открыть бота</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>Приватный VPN<br><span class="gradient">который работает в РФ</span></h1>
+    <p>Современный протокол VLESS Reality. Без рекламы, без логов, без замедления. Подключение за минуту через Telegram-бота.</p>
+    <a href="https://t.me/MysterioVPN_bot" class="cta-btn" style="font-size: 17px; padding: 14px 32px;">Начать в Telegram →</a>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">VLESS Reality</div>
+        <div class="stat-label">Современный протокол</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">Без логов</div>
+        <div class="stat-label">Нулевая телеметрия</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">1 Гбит/с</div>
+        <div class="stat-label">Скорость канала</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <h2>Почему MystVPN</h2>
+    <p class="subtitle">Стабильное соединение даже в регионах с жёсткой фильтрацией трафика.</p>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <h3>VLESS Reality-протокол. 1 Гбит/с.</h3>
+        <p>Прячется под трафик популярных российских сайтов — DPI не отличает.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔒</div>
+        <h3>Никаких логов</h3>
+        <p>Не храним историю подключений и трафик. Только время окончания подписки.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📱</div>
+        <h3>Подключение в один клик</h3>
+        <p>Hiddify и v2rayTUN импортируют ссылку-подписку без ручной настройки.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🌍</div>
+        <h3>Премиум-сервер</h3>
+        <p>Европейский дата-центр с низкой задержкой. Стриминг и игры без лагов.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">💳</div>
+        <h3>Оплата картой и СБП</h3>
+        <p>Через YooKassa: безопасно, чек по запросу. Без подписки на автоплатёж.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🎁</div>
+        <h3>3 дня бесплатно</h3>
+        <p>Полноценный доступ для теста — без привязки карты и без обязательств.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="container">
+    <h2>Как подключиться</h2>
+    <p class="subtitle">От нажатия «Старт» до рабочего VPN — около минуты.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Открой бота</h3>
+        <p>Запусти @MysterioVPN_bot в Telegram и выбери тариф (или 3 дня бесплатно).</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Получи ссылку</h3>
+        <p>Бот пришлёт ссылку подписки. Установи Hiddify (Android/iPhone) или v2rayTUN (ПК) и добавь ссылку.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Включай</h3>
+        <p>Один тап — VPN активен. Никакой настройки серверов вручную.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Платформы</h2>
+    <p class="subtitle">Работает на любом устройстве.</p>
+    <div class="platforms">
+      <div class="platform">
+        <div class="platform-icon">📱</div>
+        <h3>Android</h3>
+        <p>Hiddify — вставь ссылку подписки</p>
+      </div>
+      <div class="platform">
+        <div class="platform-icon">🍎</div>
+        <h3>iPhone / iPad</h3>
+        <p>Hiddify из App Store</p>
+      </div>
+      <div class="platform">
+        <div class="platform-icon">💻</div>
+        <h3>Windows</h3>
+        <p>v2rayTUN или Hiddify Desktop</p>
+      </div>
+      <div class="platform">
+        <div class="platform-icon">🖥</div>
+        <h3>Mac</h3>
+        <p>v2rayTUN или Hiddify Desktop</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="container">
+    <h2>Частые вопросы</h2>
+    <div class="faq">
+      <div class="faq-item">
+        <h3>Будет ли работать в России?</h3>
+        <p>Да. Сервис рассчитан именно на РФ — протокол маскируется под трафик к sber.ru и проходит сквозь DPI и блокировки.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Что за протокол?</h3>
+        <p>MystVPN использует VLESS Reality — самый устойчивый к блокировкам протокол на сегодня.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Сколько устройств можно подключить?</h3>
+        <p>Одна подписка — без жёстких ограничений на количество устройств. Не злоупотребляй массовой раздачей, иначе ключ будет сброшен.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Как оплатить?</h3>
+        <p>Картой любого банка или через СБП. Платёжный шлюз — YooKassa. Подписка не списывается автоматически — продляешь сам.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Можно вернуть деньги?</h3>
+        <p>Да. Если VPN не подошёл — напиши в поддержку @Myst_support в течение 7 дней, вернём оплату.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Где получить помощь?</h3>
+        <p>Поддержка работает в Telegram: @Myst_support. Отвечаем в течение часа в рабочее время.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <div class="cta-section">
+    <h2>Попробуй бесплатно</h2>
+    <p>3 дня без оплаты. Полная скорость, все функции.</p>
+    <a href="https://t.me/MysterioVPN_bot" class="cta-btn" style="font-size: 17px; padding: 14px 32px;">Начать в Telegram →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>
+      <a href="https://t.me/MysterioVPN_bot">Telegram-бот</a>
+      <a href="https://t.me/Myst_support">Поддержка</a>
+      <a href="https://teletype.in/@mystadm/X2oafHAItL9">Оферта</a>
+    </p>
+    <p style="margin-top: 12px;">© 2026 MystVPN</p>
+  </div>
+</footer>
+
+</body>
+</html>
