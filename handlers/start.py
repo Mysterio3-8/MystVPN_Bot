@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, GiftService, XrayService, ReferralService, fmt_key, i18n
+from services import UserService, SubscriptionService, GiftService, XrayService, ReferralService, PromoService, fmt_key, i18n
 from keyboards import main_menu_keyboard, about_keyboard, back_keyboard
 from config import PLANS, TRIAL_DAYS
 
@@ -85,6 +85,31 @@ async def cmd_start(message: Message) -> None:
     if args and args.startswith("gift_"):
         await _activate_gift(message, args[5:])
         return
+
+    # Deeplink с промокодом: /start promo_CODE или /start p_CODE
+    if args and (args.startswith("promo_") or args.startswith("p_")):
+        code = args[6:] if args.startswith("promo_") else args[2:]
+        if code:
+            async with AsyncSessionLocal() as session:
+                from models import User as _User
+                from sqlalchemy import select as _sel
+                _u, _ = await UserService.get_or_create(
+                    session, user_id=message.from_user.id,
+                    username=message.from_user.username,
+                    first_name=message.from_user.first_name,
+                )
+                promo = await PromoService.get_by_code(session, code)
+                if promo and promo.is_active:
+                    await PromoService.save_discount(message.from_user.id, promo.discount_percent, promo.id, code)
+                    await message.answer(
+                        f"🎟 <b>Промокод <code>{code}</code> активирован!</b>\n\n"
+                        f"Скидка <b>{promo.discount_percent}%</b> будет применена автоматически.\n\n"
+                        f"Выбери тариф 👇",
+                        parse_mode="HTML",
+                    )
+                else:
+                    await message.answer("❌ Промокод не найден или недействителен.", parse_mode="HTML")
+            return
 
     # Обрабатываем реферальную ссылку: ?start=ref_USER_ID
     referrer_id: int | None = None

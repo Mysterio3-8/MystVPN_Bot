@@ -6,15 +6,16 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from sqlalchemy import select
+from sqlalchemy import select, func
 from database import AsyncSessionLocal
 from models import Subscription
 from config import EXPIRY_DISCOUNT_PERCENT
 
 logger = logging.getLogger(__name__)
 
-CHECK_INTERVAL = 6 * 3600   # раз в 6 часов
-INBOUND_CHECK_INTERVAL = 3600  # раз в час
+CHECK_INTERVAL = 6 * 3600       # раз в 6 часов
+INBOUND_CHECK_INTERVAL = 3600   # раз в час
+DAILY_STATS_INTERVAL = 24 * 3600  # раз в сутки
 
 
 async def _send_expiry_notifications(bot) -> None:
@@ -213,11 +214,70 @@ async def _cleanup_expired_rotations(bot) -> None:
             logger.warning(f"Rotation cleanup error for sub {sub.id}: {e}")
 
 
+async def _send_daily_stats(bot) -> None:
+    """Ежедневная сводка для администраторов."""
+    from config import config
+    from models import User, Subscription
+    from services.payment_service import PaymentService
+    from services.xray_service import XrayService
+
+    if not config.admin_ids:
+        return
+
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    async with AsyncSessionLocal() as session:
+        # Всего пользователей
+        total_users = (await session.execute(select(func.count()).select_from(User))).scalar() or 0
+        # Активных подписок
+        active_subs = (await session.execute(
+            select(func.count()).select_from(Subscription).where(Subscription.status == "active")
+        )).scalar() or 0
+        # Истекает сегодня
+        expiring = (await session.execute(
+            select(func.count()).select_from(Subscription).where(
+                Subscription.status == "active",
+                Subscription.end_date >= today_start,
+                Subscription.end_date < today_start + timedelta(days=1),
+            )
+        )).scalar() or 0
+        # Новых подписок за сутки
+        new_today = (await session.execute(
+            select(func.count()).select_from(Subscription).where(
+                Subscription.start_date >= today_start,
+                Subscription.status == "active",
+            )
+        )).scalar() or 0
+
+    # Статус xray
+    xray_status = await XrayService.test_connection()
+    xray_ok = "✅" if "✅ 3x-ui подключён" in xray_status else "🔴"
+
+    text = (
+        f"📊 <b>MystVPN — Ежедневная сводка</b>\n"
+        f"<i>{now.strftime('%d.%m.%Y %H:%M')} UTC</i>\n\n"
+        f"👥 Всего пользователей: <b>{total_users}</b>\n"
+        f"✅ Активных подписок: <b>{active_subs}</b>\n"
+        f"🆕 Новых подписок сегодня: <b>{new_today}</b>\n"
+        f"⏰ Истекает сегодня: <b>{expiring}</b>\n\n"
+        f"🖥 XRay: {xray_ok}"
+    )
+
+    for admin_id in config.admin_ids:
+        try:
+            await bot.send_message(admin_id, text, parse_mode="HTML")
+        except Exception as e:
+            logger.warning(f"Daily stats: cannot notify admin {admin_id}: {e}")
+
+
 async def run_notification_loop(bot) -> None:
     """
     Бесконечный цикл. Запускается через asyncio.create_task() в main.py.
     """
     logger.info("🔔 Notification service started")
+    daily_stats_counter = 0
+
     while True:
         try:
             await _send_expiry_notifications(bot)
@@ -228,6 +288,15 @@ async def run_notification_loop(bot) -> None:
             await _cleanup_expired_rotations(bot)
         except Exception as e:
             logger.error(f"Rotation cleanup error: {e}")
+
+        # Ежедневная статистика — раз в 4 итерации (4 × 6ч = 24ч)
+        daily_stats_counter += 1
+        if daily_stats_counter >= 4:
+            daily_stats_counter = 0
+            try:
+                await _send_daily_stats(bot)
+            except Exception as e:
+                logger.error(f"Daily stats error: {e}")
 
         await asyncio.sleep(CHECK_INTERVAL)
 
