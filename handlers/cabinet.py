@@ -265,3 +265,25 @@ async def reset_key_confirmed(callback: CallbackQuery) -> None:
 
     await callback.message.edit_text(text, reply_markup=back_keyboard("menu_cabinet", lang), parse_mode="HTML")
     await callback.answer()
+
+
+@router.callback_query(F.data == "cabinet_no_connection")
+async def no_connection_help(callback: CallbackQuery) -> None:
+    """Помощь при проблемах с подключением."""
+    await callback.answer()
+    await callback.message.answer(
+        "⚠️ <b>Не подключается?</b>\n\n"
+        "<b>1. Обнови подписку в приложении</b>\n"
+        "Hiddify / v2rayTUN → нажми «Обновить» (Refresh).\n"
+        "Получишь оба протокола: Reality + XHTTP — приложение само выберет рабочий.\n\n"
+        "<b>2. Региональное отключение</b>\n"
+        "В некоторых регионах РФ мобильный интернет временно ограничивается.\n"
+        "Это не проблема с ключом — переключись на Wi-Fi или подожди.\n\n"
+        "<b>3. Смени сервер в приложении</b>\n"
+        "Выбери <b>🌐 MystVPN XHTTP</b> — лучше проходит через мобильный интернет.\n\n"
+        "<b>4. Сброс ключа</b>\n"
+        "Кабинет → 🔑 Сбросить ключ → получишь новый.\n\n"
+        "💬 Поддержка: @Myst_support",
+        parse_mode="HTML",
+        reply_markup=back_keyboard("menu_cabinet", "ru"),
+    )

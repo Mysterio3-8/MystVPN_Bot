@@ -34,6 +34,7 @@ class Config:
     xray_username: str = field(default_factory=lambda: getenv("XRAY_USERNAME", "admin"))
     xray_password: str = field(default_factory=lambda: getenv("XRAY_PASSWORD", ""))
     xray_inbound_id: int = field(default_factory=lambda: int(getenv("XRAY_INBOUND_ID", "1")))
+    xray_xhttp_inbound_id: int = field(default_factory=lambda: int(getenv("XRAY_XHTTP_INBOUND_ID", "4")))
     xray_address: str = field(default_factory=lambda: getenv("XRAY_ADDRESS", "") or getenv("XRAY_ADDRES", ""))
     webhook_port: int = field(default_factory=lambda: int(getenv("WEBHOOK_PORT", "8090")))
     # Reality inbound settings — for auto-recreate watchdog

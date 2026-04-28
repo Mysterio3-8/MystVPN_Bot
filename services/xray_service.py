@@ -183,30 +183,43 @@ class XrayService:
             if not await cls._login(session):
                 raise RuntimeError("XRay login failed")
 
-            client_settings = {
-                "id": int(cls.get_inbound_id()),
-                "settings": json.dumps({
-                    "clients": [{
-                        "id": client_uuid,
-                        "email": email,
-                        "flow": "xtls-rprx-vision",
-                        "limitIp": 0,
-                        "totalGB": 0,
-                        "expiryTime": expiry_ms,
-                        "enable": True,
-                        "tgId": str(user_id),
-                        "subId": sub_id,
-                        "comment": f"MystVPN user {user_id}",
-                        "reset": 0,
-                    }]
-                }),
-            }
+            add_url = f"{cls._base_url()}/panel/api/inbounds/addClient"
 
-            url = f"{cls._base_url()}/panel/api/inbounds/addClient"
-            resp = await session.post(url, json=client_settings, timeout=aiohttp.ClientTimeout(total=15))
+            # Основной инбаунд (VLESS Reality)
+            reality_settings = {
+                "id": int(cls.get_inbound_id()),
+                "settings": json.dumps({"clients": [{
+                    "id": client_uuid, "email": email,
+                    "flow": "xtls-rprx-vision",
+                    "limitIp": 0, "totalGB": 0,
+                    "expiryTime": expiry_ms, "enable": True,
+                    "tgId": str(user_id), "subId": sub_id,
+                    "comment": f"MystVPN user {user_id}", "reset": 0,
+                }]}),
+            }
+            resp = await session.post(add_url, json=reality_settings, timeout=aiohttp.ClientTimeout(total=15))
             add_data = await resp.json(content_type=None)
             if not add_data.get("success"):
                 raise RuntimeError(f"addClient failed: {add_data.get('msg', add_data)}")
+
+            # Резервный инбаунд XHTTP (тот же subId → оба протокола в одной подписке)
+            xhttp_id = config.xray_xhttp_inbound_id
+            if xhttp_id:
+                try:
+                    xhttp_settings = {
+                        "id": int(xhttp_id),
+                        "settings": json.dumps({"clients": [{
+                            "id": client_uuid, "email": email,
+                            "flow": "",
+                            "limitIp": 0, "totalGB": 0,
+                            "expiryTime": expiry_ms, "enable": True,
+                            "tgId": str(user_id), "subId": sub_id,
+                            "comment": f"MystVPN user {user_id}", "reset": 0,
+                        }]}),
+                    }
+                    await session.post(add_url, json=xhttp_settings, timeout=aiohttp.ClientTimeout(total=10))
+                except Exception as e:
+                    logger.warning(f"XRay: XHTTP client add failed (non-critical): {e}")
 
             inbound = await cls._get_inbound(session, cls.get_inbound_id())
             if not inbound:
@@ -351,7 +364,7 @@ class XrayService:
     @classmethod
     async def recreate_inbound(cls) -> tuple[bool, int]:
         """
-        Пересоздаёт Reality inbound с актуальными российскими настройками (vk.com).
+        Пересоздаёт Reality inbound с актуальными российскими настройками (sber.ru).
         Возвращает (success, new_inbound_id).
         Вызывается watchdog'ом автоматически при обнаружении отсутствия inbound.
         """
