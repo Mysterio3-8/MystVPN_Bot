@@ -2,9 +2,9 @@
 Хелпер для форматирования VPN-ключа/ссылки в сообщениях.
 
 Правило:
-  - Если есть sub_url → показываем ТОЛЬКО его (красиво, с инструкцией)
-  - Если sub_url нет, но есть vpn_key → показываем сырой ключ
-  - Ни того ни другого → просим зайти в кабинет
+  - Показываем ТОЛЬКО subscription URL (https://keybest.cc/...).
+  - Сырой vless:// ключ НИКОГДА не показываем — он содержит IP сервера и порт.
+  - Если sub_url нет — просим обратиться в поддержку.
 """
 
 
@@ -25,9 +25,7 @@ def fmt_key(vpn_key: str | None, sub_url: str | None) -> str:
         )
     if vpn_key:
         return (
-            f"\n\n🔑 <b>Твой VPN-ключ:</b>\n"
-            f"<code>{vpn_key}</code>\n\n"
-            f"<i>📱 Android → Hiddify (без настройки)\n"
-            f"🍎 iPhone / 💻 ПК → Hiddify / v2rayTUN</i>"
+            "\n\n⚠️ Subscription-ссылка временно недоступна.\n"
+            "Зайди в /cabinet через минуту или напиши в @Myst_support."
         )
     return "\n\n📋 Ключ доступен в /cabinet"

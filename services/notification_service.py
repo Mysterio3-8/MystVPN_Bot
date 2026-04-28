@@ -90,69 +90,47 @@ async def _notify_if_needed(bot, sub: Subscription, days_left: int) -> None:
             await session.commit()
 
 
+# Антиспам: не чаще раза в 12 часов админу о падении inbound
+_last_inbound_alert: datetime | None = None
+_inbound_fail_streak: int = 0
+
+
 async def _check_inbound_health(bot) -> None:
-    """Проверяет доступность xray inbound. При отсутствии — пересоздаёт и рассылает новые ключи."""
+    """
+    Проверяет доступность xray inbound.
+    НЕ пересоздаёт автоматически и НЕ переиздаёт ключи — только уведомляет админа.
+    Авто-пересоздание было источником дублирующихся рассылок.
+    """
+    global _last_inbound_alert, _inbound_fail_streak
     from services.xray_service import XrayService
     from config import config
-    from models import Subscription
-    from sqlalchemy import select
 
     status = await XrayService.test_connection()
     if "✅ 3x-ui подключён" in status:
+        _inbound_fail_streak = 0
         return
 
-    logger.warning(f"Inbound watchdog: inbound недоступен — {status}")
+    _inbound_fail_streak += 1
+    logger.warning(f"Inbound watchdog: inbound недоступен (fail #{_inbound_fail_streak}) — {status}")
 
-    success, new_id = await XrayService.recreate_inbound()
-    if not success:
-        for admin_id in config.admin_ids:
-            try:
-                await bot.send_message(
-                    admin_id,
-                    f"🚨 <b>VPN inbound недоступен!</b>\n\n"
-                    f"Попытка пересоздать — <b>провалилась</b>.\n"
-                    f"Статус: {status}\n\n"
-                    f"Проверь панель 3x-ui вручную.",
-                    parse_mode="HTML",
-                )
-            except Exception:
-                pass
+    # Уведомляем только после 2 подряд провалов (фильтруем сетевые блипы)
+    # и не чаще раза в 12 часов
+    if _inbound_fail_streak < 2:
         return
-
-    # Переиздаём ключи всем активным пользователям
-    reissued = 0
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Subscription).where(Subscription.status == "active"))
-        subs = result.scalars().all()
-        for sub in subs:
-            days_left = max(1, (sub.end_date - datetime.utcnow()).days)
-            try:
-                vpn_key, sub_url = await XrayService.reset_client(sub.user_id, days_left, sub.vpn_key)
-                if vpn_key:
-                    sub.vpn_key = vpn_key
-                    if sub_url:
-                        sub.sub_url = sub_url
-                    reissued += 1
-                    from services.key_helper import fmt_key as _fmt
-                    await bot.send_message(
-                        sub.user_id,
-                        f"🔄 <b>Ваш VPN обновлён</b>\n\n"
-                        f"Мы улучшили сервер. Зайди в кабинет — новый ключ уже там."
-                        f"{_fmt(vpn_key, sub_url)}\n\n"
-                        f"Обнови подписку в приложении (v2rayTUN / Hiddify).",
-                        parse_mode="HTML",
-                    )
-            except Exception as e:
-                logger.warning(f"Inbound watchdog: reissue failed for user {sub.user_id}: {e}")
-        await db.commit()
+    now = datetime.utcnow()
+    if _last_inbound_alert and (now - _last_inbound_alert).total_seconds() < 12 * 3600:
+        return
+    _last_inbound_alert = now
 
     for admin_id in config.admin_ids:
         try:
             await bot.send_message(
                 admin_id,
-                f"✅ <b>Inbound автоматически пересоздан</b>\n\n"
-                f"Новый ID: <b>{new_id}</b>\n"
-                f"Ключи переизданы: <b>{reissued}/{len(subs)}</b>",
+                f"🚨 <b>VPN inbound недоступен!</b>\n\n"
+                f"Статус: {status}\n\n"
+                f"Зайди в админ-панель → «Ротация ключей» если нужно вручную "
+                f"перевыдать ключи. Авто-пересоздание ОТКЛЮЧЕНО, чтобы не "
+                f"спамить пользователям.",
                 parse_mode="HTML",
             )
         except Exception:

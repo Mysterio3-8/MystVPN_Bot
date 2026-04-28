@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -314,59 +315,75 @@ async def admin_rotate_keys_confirm(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
+_rotation_lock = asyncio.Lock()
+
+
 @router.callback_query(F.data == "admin_rotate_keys_go")
 async def admin_rotate_keys_go(callback: CallbackQuery) -> None:
     if not is_admin(callback.from_user.id):
         await callback.answer("❌ Нет доступа", show_alert=True)
         return
 
-    await callback.answer("⏳ Запускаю ротацию...", show_alert=False)
-    await callback.message.edit_text(
-        "⏳ <b>Ротация запущена...</b>\n\nЭто может занять несколько минут.",
-        parse_mode="HTML",
-    )
+    if _rotation_lock.locked():
+        await callback.answer("⏳ Ротация уже выполняется — подождите", show_alert=True)
+        return
 
-    from services.key_helper import fmt_key
+    async with _rotation_lock:
+        await callback.answer("⏳ Запускаю ротацию...", show_alert=False)
+        await callback.message.edit_text(
+            "⏳ <b>Ротация запущена...</b>\n\nЭто может занять несколько минут.",
+            parse_mode="HTML",
+        )
 
-    success, failed = 0, 0
-    async with AsyncSessionLocal() as session:
-        subs = await SubscriptionService.get_all_active(session)
+        from services.key_helper import fmt_key
 
-    for sub in subs:
-        try:
-            days_left = max(1, (sub.end_date - datetime.utcnow()).days)
-            new_key, new_sub_url = await XrayService.create_client(sub.user_id, days_left)
-            if new_key:
-                async with AsyncSessionLocal() as session:
-                    await SubscriptionService.save_rotation_key(session, sub.id, new_key, new_sub_url)
-                try:
-                    await callback.bot.send_message(
-                        sub.user_id,
-                        f"🔄 <b>Важно: обновление VPN-ключей</b>\n\n"
-                        f"Мы обновили инфраструктуру.\n"
-                        f"Твой <b>новый ключ</b> уже доступен в кабинете.\n\n"
-                        f"Старый ключ будет работать ещё <b>24 часа</b>.\n"
-                        f"После — переключись на новый."
-                        f"{fmt_key(new_key, new_sub_url)}\n\n"
-                        f"👉 /cabinet → «Применить новый ключ сейчас»",
-                        parse_mode="HTML",
-                    )
-                except Exception:
-                    pass
-                success += 1
-            else:
+        success, failed, skipped = 0, 0, 0
+        now = datetime.utcnow()
+        async with AsyncSessionLocal() as session:
+            subs = await SubscriptionService.get_all_active(session)
+
+        for sub in subs:
+            # Идемпотентность: если у юзера уже есть ожидающий новый ключ
+            # (не истёкший grace) — пропускаем. Это защищает от повторных
+            # нажатий админом и от параллельных задач.
+            if sub.new_vpn_key and sub.key_rotation_deadline and sub.key_rotation_deadline > now:
+                skipped += 1
+                continue
+            try:
+                days_left = max(1, (sub.end_date - now).days)
+                new_key, new_sub_url = await XrayService.create_client(sub.user_id, days_left)
+                if new_key:
+                    async with AsyncSessionLocal() as session:
+                        await SubscriptionService.save_rotation_key(session, sub.id, new_key, new_sub_url)
+                    try:
+                        await callback.bot.send_message(
+                            sub.user_id,
+                            f"🔄 <b>Важно: обновление VPN-ключей</b>\n\n"
+                            f"Мы обновили инфраструктуру.\n"
+                            f"Твой <b>новый ключ</b> уже доступен в кабинете.\n\n"
+                            f"Старый ключ будет работать ещё <b>24 часа</b>.\n"
+                            f"После — переключись на новый."
+                            f"{fmt_key(new_key, new_sub_url)}\n\n"
+                            f"👉 /cabinet → «Применить новый ключ сейчас»",
+                            parse_mode="HTML",
+                        )
+                    except Exception:
+                        pass
+                    success += 1
+                else:
+                    failed += 1
+            except Exception:
                 failed += 1
-        except Exception:
-            failed += 1
 
-    await callback.message.edit_text(
-        f"✅ <b>Ротация завершена</b>\n\n"
-        f"Новые ключи выданы: <b>{success}</b>\n"
-        f"Ошибок: <b>{failed}</b>\n\n"
-        f"Старые ключи отключатся через 24 часа автоматически.",
-        reply_markup=back_keyboard("admin_panel"),
-        parse_mode="HTML",
-    )
+        await callback.message.edit_text(
+            f"✅ <b>Ротация завершена</b>\n\n"
+            f"Новые ключи выданы: <b>{success}</b>\n"
+            f"Пропущено (уже в ротации): <b>{skipped}</b>\n"
+            f"Ошибок: <b>{failed}</b>\n\n"
+            f"Старые ключи отключатся через 24 часа автоматически.",
+            reply_markup=back_keyboard("admin_panel"),
+            parse_mode="HTML",
+        )
 
 
 @router.callback_query(F.data == "admin_promo_create")
