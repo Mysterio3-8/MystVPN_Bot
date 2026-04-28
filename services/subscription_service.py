@@ -96,6 +96,12 @@ class SubscriptionService:
         if sub:
             sub.status = "active"
             sub.start_date = datetime.utcnow()
+            # Применяем накопленные реферальные дни
+            user_result = await session.execute(select(User).where(User.user_id == sub.user_id))
+            user = user_result.scalar_one_or_none()
+            if user and user.extra_days:
+                sub.end_date = sub.end_date + timedelta(days=user.extra_days)
+                user.extra_days = 0
             await session.commit()
         return sub
 

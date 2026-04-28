@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 import logging
 from aiohttp import web
@@ -45,6 +47,14 @@ async def handle_yookassa(request: web.Request) -> web.Response:
         data = json.loads(body)
     except Exception:
         return web.Response(status=400)
+
+    # Проверяем HMAC-подпись YooKassa (если webhook_secret задан)
+    if config.webhook_secret:
+        signature = request.headers.get("X-Sha256-Signature", "")
+        expected = hmac.new(config.webhook_secret.encode(), body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            logger.warning(f"YooKassa webhook: invalid signature")
+            return web.Response(status=400)
 
     event_type = data.get("event", "")
     if event_type not in ("payment.succeeded", "payment.canceled"):
