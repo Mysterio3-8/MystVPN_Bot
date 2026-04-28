@@ -40,8 +40,8 @@ class Config:
     reality_private_key: str = field(default_factory=lambda: getenv("REALITY_PRIVATE_KEY", ""))
     reality_public_key: str = field(default_factory=lambda: getenv("REALITY_PUBLIC_KEY", ""))
     reality_short_id: str = field(default_factory=lambda: getenv("REALITY_SHORT_ID", ""))
-    reality_dest: str = field(default_factory=lambda: getenv("REALITY_DEST", "vk.com:443"))
-    reality_sni: str = field(default_factory=lambda: getenv("REALITY_SNI", "vk.com"))
+    reality_dest: str = field(default_factory=lambda: getenv("REALITY_DEST", "www.microsoft.com:443"))
+    reality_sni: str = field(default_factory=lambda: getenv("REALITY_SNI", "www.microsoft.com"))
     sub_domain: str = field(default_factory=lambda: getenv("SUB_DOMAIN", ""))
     # Путь к endpoint подписки. Для 3x-ui: /sub/  Для Remnawave: /rem/sub/
     sub_path: str = field(default_factory=lambda: getenv("SUB_PATH", "/sub/"))
