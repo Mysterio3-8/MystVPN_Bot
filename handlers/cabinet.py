@@ -264,6 +264,21 @@ async def reset_key_confirmed(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
+@router.callback_query(F.data == "cabinet_bypass_help")
+async def bypass_help(callback: CallbackQuery) -> None:
+    """Инструкция: как настроить клиент, чтобы РФ-сервисы шли мимо VPN."""
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, callback.from_user.id)
+        lang = user.language if user else "ru"
+    await callback.message.answer(
+        i18n.t("bypass_help_text", lang),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+        reply_markup=back_keyboard("menu_cabinet", lang),
+    )
+    await callback.answer()
+
+
 @router.callback_query(F.data == "cabinet_no_connection")
 async def no_connection_help(callback: CallbackQuery) -> None:
     """Помощь при проблемах с подключением."""
