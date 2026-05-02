@@ -345,6 +345,7 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
     try:
         result = await PaymentService.create_yookassa_payment(plan["price"], plan_key, user_id, return_url)
         async with AsyncSessionLocal() as session:
+            sub = await SubscriptionService.create_pending(session, user_id, plan_key)
             gift = await GiftService.create(session, plan_key, user_id)
             from sqlalchemy import select as _select
             from models import GiftCode as _GiftCode
@@ -360,6 +361,7 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
                 currency="RUB",
                 payment_method="yookassa_gift",
                 plan=plan_key,
+                subscription_id=sub.id,
                 payment_ext_id=result["id"],
             )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -406,6 +408,7 @@ async def pay_gift_sbp(callback: CallbackQuery) -> None:
         return
 
     async with AsyncSessionLocal() as session:
+        sub = await SubscriptionService.create_pending(session, user_id, plan_key)
         gift = await GiftService.create(session, plan_key, user_id)
         from sqlalchemy import select as _select
         from models import GiftCode as _GiftCode
@@ -421,6 +424,7 @@ async def pay_gift_sbp(callback: CallbackQuery) -> None:
             currency="RUB",
             payment_method="yookassa_gift",
             plan=plan_key,
+            subscription_id=sub.id,
             payment_ext_id=result["id"],
         )
 
