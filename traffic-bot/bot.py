@@ -31,11 +31,19 @@ from config import (
     PRIVATE_CHANNEL_ID,
     WELCOME_PHOTO_PATH,
     WELCOME_TEXT,
+    ADMIN_IDS,
+    MAX_LINKS_PER_USER,
+    DATABASE_PATH,
 )
 
 # Инициализация бота и диспетчера
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+# Функция проверки администратора
+def is_admin(user_id: int) -> bool:
+    """Проверка, является ли пользователь администратором"""
+    return str(user_id) in ADMIN_IDS
 
 # Инициализация базы данных
 def init_db():
@@ -84,7 +92,7 @@ def init_db():
 
 # Вспомогательные функции для работы с БД
 def get_user(user_id: int):
-    conn = sqlite3.connect("bot_data.db")
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     user = cursor.fetchone()
@@ -102,7 +110,7 @@ def create_or_update_user(user_id: int, username: str, first_name: str, last_nam
     conn.close()
 
 def get_active_invite_link(user_id: int):
-    conn = sqlite3.connect("bot_data.db")
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT invite_link FROM invite_links
@@ -114,7 +122,7 @@ def get_active_invite_link(user_id: int):
     return link[0] if link else None
 
 def create_invite_link(user_id: int, invite_link: str, expires_at: datetime):
-    conn = sqlite3.connect("bot_data.db")
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO invite_links (user_id, invite_link, expires_at)
@@ -124,7 +132,7 @@ def create_invite_link(user_id: int, invite_link: str, expires_at: datetime):
     conn.close()
 
 def update_statistics(total_starts: int = 0, total_subscriptions: int = 0):
-    conn = sqlite3.connect("bot_data.db")
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     today = datetime.now().date()
     cursor.execute("""
@@ -138,13 +146,25 @@ def update_statistics(total_starts: int = 0, total_subscriptions: int = 0):
     conn.close()
 
 def get_today_stats():
-    conn = sqlite3.connect("bot_data.db")
+    conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     today = datetime.now().date()
     cursor.execute("SELECT total_starts, total_subscriptions FROM statistics WHERE date = ?", (today,))
     stats = cursor.fetchone()
     conn.close()
     return stats if stats else (0, 0)
+
+def get_user_links_count(user_id: int) -> int:
+    """Получить количество активных ссылок пользователя"""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) FROM invite_links
+        WHERE user_id = ? AND is_used = 0 AND expires_at > CURRENT_TIMESTAMP
+    """, (user_id,))
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
 
 # Обработчик команды /start
 @dp.message(Command("start"))
@@ -233,7 +253,14 @@ async def check_subscription(callback: CallbackQuery):
         status = chat_member.status
         logger.info(f"Статус подписки на канал пользователя {user_id}: {status}")
         
-        if status not in ["member", "administrator", "creator"]:
+        # Проверяем все возможные статусы
+        if status in ["left", "kicked"]:
+            await callback.answer(
+                "⛔️ Вы не подписаны на канал или были заблокированы! Пожалуйста, подпишитесь и попробуйте снова.",
+                show_alert=True
+            )
+            return
+        elif status not in ["member", "administrator", "creator"]:
             await callback.answer(
                 "⛔️ Вы не подписаны на канал! Пожалуйста, подпишитесь и попробуйте снова.",
                 show_alert=True
@@ -246,6 +273,29 @@ async def check_subscription(callback: CallbackQuery):
                 "⛔️ Вы заблокировали бота. Разблокируйте его, чтобы получить доступ.",
                 show_alert=True
             )
+            return
+        
+        # Проверка 3: лимит ссылок для пользователя
+        current_links = get_user_links_count(user_id)
+        if current_links >= MAX_LINKS_PER_USER:
+            active_link = get_active_invite_link(user_id)
+            if active_link:
+                await callback.message.answer(
+                    "🎉 <b>Подписка на канал и бота подтверждена!</b>\n\n"
+                    f"Доступ открыт. Вот твоя личная ссылка в закрытый канал с VPN. Действует 1 час.",
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=InlineKeyboardBuilder().row(
+                        InlineKeyboardButton(
+                            text="🔐 Войти в приватный канал",
+                            url=active_link
+                        )
+                    ).as_markup()
+                )
+            else:
+                await callback.answer(
+                    f"⛔️ У вас уже есть активная ссылка (максимум {MAX_LINKS_PER_USER} на пользователя).",
+                    show_alert=True
+                )
             return
         
         # Обе проверки пройдены - выдаем ссылку
@@ -313,7 +363,10 @@ async def check_subscription(callback: CallbackQuery):
 # Команда для администратора - статистика
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message):
-    # В реальном проекте здесь должна быть проверка на администратора
+    if not is_admin(message.from_user.id):
+        await message.answer("⛔️ У вас нет доступа к этой команде.")
+        return
+    
     total_starts, total_subscriptions = get_today_stats()
     
     stats_text = f"📊 Статистика за сегодня:\n"
@@ -329,7 +382,10 @@ async def cmd_stats(message: Message):
 # Команда для администратора - обновление приветственного фото
 @dp.message(Command("setphoto"))
 async def cmd_setphoto(message: Message):
-    # В реальном проекте здесь должна быть проверка на администратора
+    if not is_admin(message.from_user.id):
+        await message.answer("⛔️ У вас нет доступа к этой команде.")
+        return
+    
     if message.photo:
         photo: PhotoSize = message.photo[-1]
         file_info = await bot.get_file(photo.file_id)
@@ -345,13 +401,50 @@ async def cmd_setphoto(message: Message):
 # Команда для администратора - обновление текста
 @dp.message(Command("settext"))
 async def cmd_settext(message: Message):
-    # В реальном проекте здесь должна быть проверка на администратора
+    if not is_admin(message.from_user.id):
+        await message.answer("⛔️ У вас нет доступа к этой команде.")
+        return
+    
     new_text = message.text.replace("/settext ", "")
     if new_text:
         # В реальном проекте текст должен сохраняться в БД или файл конфигурации
         await message.answer("✅ Текст обновлен (в демо-режиме)")
     else:
         await message.answer("❌ Укажите новый текст: /settext <текст>")
+
+# Команда для администратора - рассылка
+@dp.message(Command("broadcast"))
+async def cmd_broadcast(message: Message):
+    if not is_admin(message.from_user.id):
+        await message.answer("⛔️ У вас нет доступа к этой команде.")
+        return
+    
+    broadcast_text = message.text.replace("/broadcast ", "")
+    if not broadcast_text:
+        await message.answer("❌ Укажите текст для рассылки: /broadcast <текст>")
+        return
+    
+    await message.answer("📤 Начинаю рассылку...")
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users")
+    users = cursor.fetchall()
+    conn.close()
+    
+    success = 0
+    failed = 0
+    
+    for (user_id,) in users:
+        try:
+            await bot.send_message(user_id, broadcast_text)
+            success += 1
+        except Exception as e:
+            logger.error(f"Не удалось отправить сообщение пользователю {user_id}: {e}")
+            failed += 1
+        await asyncio.sleep(0.05)  # Небольшая задержка для избежания флуда
+    
+    await message.answer(f"📤 Рассылка завершена!\nУспешно: {success}\nОшибок: {failed}")
 
 # Главная функция
 async def main():

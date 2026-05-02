@@ -9,11 +9,24 @@
 - **Backend:** Python 3.11, aiogram 3.x, async/await везде
 - **БД:** PostgreSQL 16 (SQLAlchemy ORM), миграции через `migrate.py`
 - **Кэш/FSM:** Redis 7
-- **Платежи:** YooKassa (RUB) + Telegram Stars (XTR)
+- **Платежи:** YooKassa (RUB карта + СБП). Telegram Stars **отключены**
 - **VPN панель:** 3x-ui (VLESS Reality)
 - **Локализация:** JSON locales в `locales/`
 
-## Структура проекта
+## Структура проекта (модульная)
+| Модуль | Что | Статус |
+|---|---|---|
+| **корень** (handlers/, models/, services/, main.py) | Основной MystVPN бот | 🟢 Прод |
+| `site/` | Лендинг keybest.cc + гайды | 🟢 Прод |
+| `traffic-bot/` | Маркетинг-бот для закупа TG-каналов | 🟠 Dev |
+| `vpn-app/` | iOS/Android клиент | ⚪ Заготовка |
+| `vpn-protocol/` | Протокольные улучшения / обфускации | ⚪ Заготовка |
+
+В каждой папке свой `CLAUDE.md` с инструкциями для разработки.
+
+**План** перенести основной бот из корня в `bot/` — см. `BOT_MIGRATION_PLAN.md` (требует окно обслуживания).
+
+### Подпапки основного бота (в корне)
 - `handlers/` — логика команд (start, buy, cabinet, admin, payments)
 - `models/` — схемы БД (User, Subscription, Payment, Promo)
 - `services/` — бизнес-логика (xray_service, yookassa, i18n)
@@ -21,6 +34,22 @@
 - `locales/` — переводы (RU, EN и ещё 15 языков)
 - `nginx/conf.d/` — nginx конфиг (монтируется в Docker)
 - `.claude/commands/` — скиллы: `/deploy`, `/server`, `/ssl`
+
+## OPSEC — публичная коммуникация
+**Никогда не упоминать в публичном контенте (сайт, TG-посты, ads, App Store):**
+- VLESS, Reality, xray, прокси, протокол, обфускация, SNI, fallback
+- Конкретные технические детали обхода
+
+**Можно и нужно говорить:**
+- «Обход блокировок», «доступ ко всему интернету»
+- «Готовы к Чебурнету», «работает когда другие падают»
+- «Высокая скорость», «без логов», «гарантия возврата»
+
+## Zero-downtime — критическое требование
+- Бот никогда не должен падать при обновлении
+- Все деплои незаметны для юзеров
+- Изменения схемы БД — только обратно совместимо (nullable → backfill → required в три коммита)
+- Перед серьёзными рефакторингами — окно обслуживания + предупреждение в боте
 
 ## Сервер и деплой
 
@@ -84,8 +113,8 @@ docker compose exec nginx nginx -s reload     # reload nginx без даунта
 - После смены домена: `yookassa.ru` → Настройки → HTTP-уведомления → обновить URL
 
 ## Платежи
-- `XTR` — Telegram Stars (обработка в `handlers/payments.py`)
-- `RUB` — YooKassa (webhook на `/webhook/yookassa`)
+- `RUB` — YooKassa: карта + СБП (webhook на `/webhook/yookassa`)
+- Telegram Stars (XTR) — **отключены полностью** (см. memory `feedback_no_stars.md`)
 - Обработка успешной оплаты: `services/payment_service.py`
 
 ## Правила разработки
