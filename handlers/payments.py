@@ -71,7 +71,10 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
     plan_key = callback.data.replace("pay_yookassa_", "")
     plan = PLANS.get(plan_key)
     if not plan:
-        await callback.answer("Неверный тариф", show_alert=True)
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, callback.from_user.id)
+            lang = user.language if user else "ru"
+        await callback.answer(i18n.t("err_invalid_plan", lang), show_alert=True)
         return
 
     user_id = callback.from_user.id
@@ -137,9 +140,9 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
             await PromoService.clear_discount(user_id)
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплатить картой", url=result["url"])],
-            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_buy")],
+            [InlineKeyboardButton(text=i18n.t("btn_pay_card", lang), url=result["url"])],
+            [InlineKeyboardButton(text=i18n.t("btn_paid", lang), callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
+            [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")],
         ])
         await callback.message.edit_text(
             f"💳 Оплата картой\n\nТариф: <b>{plan['period']}</b>\n"
@@ -149,8 +152,11 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
             parse_mode="HTML",
         )
     except Exception:
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, callback.from_user.id)
+            lang = user.language if user else "ru"
         await callback.message.edit_text(
-            "❌ Ошибка при создании платежа. Попробуйте позже.",
+            i18n.t("err_payment_create", lang),
             reply_markup=back_keyboard("menu_buy"),
         )
 
@@ -235,7 +241,10 @@ async def pay_sbp(callback: CallbackQuery) -> None:
     plan_key = callback.data.replace("pay_sbp_", "")
     plan = PLANS.get(plan_key)
     if not plan:
-        await callback.answer("Неверный тариф", show_alert=True)
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, callback.from_user.id)
+            lang = user.language if user else "ru"
+        await callback.answer(i18n.t("err_invalid_plan", lang), show_alert=True)
         return
 
     user_id = callback.from_user.id
@@ -281,12 +290,15 @@ async def pay_sbp(callback: CallbackQuery) -> None:
         return
 
     import logging as _log
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, user_id)
+        lang = user.language if user else "ru"
     try:
         result = await PaymentService.create_yookassa_sbp(price, plan_key, user_id, return_url)
     except Exception as sbp_err:
         _log.getLogger(__name__).error(f"SBP create error user={user_id} plan={plan_key}: {sbp_err}", exc_info=True)
         await callback.message.edit_text(
-            "❌ Ошибка при создании СБП-платежа. Попробуйте оплату картой.",
+            i18n.t("err_sbp_create", lang),
             reply_markup=back_keyboard("menu_buy"),
         )
         await callback.answer()
@@ -311,9 +323,9 @@ async def pay_sbp(callback: CallbackQuery) -> None:
         await PromoService.clear_discount(user_id)
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
-        [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_buy")],
+        [InlineKeyboardButton(text=i18n.t("btn_pay_sbp", lang), url=result["url"])],
+        [InlineKeyboardButton(text=i18n.t("btn_paid", lang), callback_data=f"check_yookassa_{result['id']}_{sub.id}")],
+        [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_buy")],
     ])
     await callback.message.edit_text(
         f"📱 <b>Оплата через СБП</b>\n\n"
@@ -336,13 +348,19 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
     plan_key = callback.data.replace("pay_gift_yookassa_", "")
     plan = PLANS.get(plan_key)
     if not plan:
-        await callback.answer("Неверный тариф", show_alert=True)
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, callback.from_user.id)
+            lang = user.language if user else "ru"
+        await callback.answer(i18n.t("err_invalid_plan", lang), show_alert=True)
         return
 
     user_id = callback.from_user.id
     return_url = f"https://t.me/{config.bot_username}"
 
     try:
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, user_id)
+            lang = user.language if user else "ru"
         result = await PaymentService.create_yookassa_payment(plan["price"], plan_key, user_id, return_url)
         async with AsyncSessionLocal() as session:
             sub = await SubscriptionService.create_pending(session, user_id, plan_key)
@@ -365,20 +383,23 @@ async def pay_gift_yookassa(callback: CallbackQuery) -> None:
                 payment_ext_id=result["id"],
             )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплатить картой", url=result["url"])],
-            [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_gift_{result['id']}")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_gift")],
+            [InlineKeyboardButton(text=i18n.t("btn_pay_card", lang), url=result["url"])],
+            [InlineKeyboardButton(text=i18n.t("btn_paid", lang), callback_data=f"check_gift_{result['id']}")],
+            [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_gift")],
         ])
         await callback.message.edit_text(
-            f"🎁 <b>Подарок MystVPN — {plan['period']}</b>\n\n"
-            f"Сумма: <b>{plan['price']:.0f} ₽</b>\n\n"
-            "После оплаты мы автоматически пришлём ссылку-подарок в этот чат.",
+            i18n.t("gift_payment_title", lang, period=plan['period']) + "\n\n"
+            + i18n.t("gift_payment_sum", lang, price=plan['price']) + "\n\n"
+            + i18n.t("gift_payment_after_card", lang),
             reply_markup=keyboard,
             parse_mode="HTML",
         )
     except Exception:
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, user_id)
+            lang = user.language if user else "ru"
         await callback.message.edit_text(
-            "❌ Ошибка при создании платежа. Попробуйте позже.",
+            i18n.t("err_payment_create", lang),
             reply_markup=back_keyboard("menu_gift"),
         )
     await callback.answer()
@@ -389,19 +410,25 @@ async def pay_gift_sbp(callback: CallbackQuery) -> None:
     plan_key = callback.data.replace("pay_gift_sbp_", "")
     plan = PLANS.get(plan_key)
     if not plan:
-        await callback.answer("Неверный тариф", show_alert=True)
+        async with AsyncSessionLocal() as session:
+            user = await UserService.get(session, callback.from_user.id)
+            lang = user.language if user else "ru"
+        await callback.answer(i18n.t("err_invalid_plan", lang), show_alert=True)
         return
 
     user_id = callback.from_user.id
     return_url = f"https://t.me/{config.bot_username}"
 
     import logging as _log
+    async with AsyncSessionLocal() as session:
+        user = await UserService.get(session, user_id)
+        lang = user.language if user else "ru"
     try:
         result = await PaymentService.create_yookassa_sbp(plan["price"], plan_key, user_id, return_url)
     except Exception as sbp_err:
         _log.getLogger(__name__).error(f"Gift SBP error user={user_id}: {sbp_err}", exc_info=True)
         await callback.message.edit_text(
-            "❌ Ошибка при создании СБП-платежа. Попробуйте оплату картой.",
+            i18n.t("err_sbp_create", lang),
             reply_markup=back_keyboard("menu_gift"),
         )
         await callback.answer()
@@ -429,14 +456,14 @@ async def pay_gift_sbp(callback: CallbackQuery) -> None:
         )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Открыть СБП", url=result["url"])],
-        [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_gift_{result['id']}")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="menu_gift")],
+        [InlineKeyboardButton(text=i18n.t("btn_pay_sbp", lang), url=result["url"])],
+        [InlineKeyboardButton(text=i18n.t("btn_paid", lang), callback_data=f"check_gift_{result['id']}")],
+        [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="menu_gift")],
     ])
     await callback.message.edit_text(
-        f"🎁 <b>Подарок MystVPN — {plan['period']}</b>\n\n"
-        f"Сумма: <b>{plan['price']:.0f} ₽</b>\n\n"
-        "После оплаты через СБП мы пришлём ссылку-подарок в этот чат.",
+        i18n.t("gift_payment_title", lang, period=plan['period']) + "\n\n"
+        + i18n.t("gift_payment_sum", lang, price=plan['price']) + "\n\n"
+        + i18n.t("gift_payment_after_sbp", lang),
         reply_markup=keyboard,
         parse_mode="HTML",
     )

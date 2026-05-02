@@ -20,46 +20,37 @@ async def _cabinet_text(user_id: int, lang: str) -> tuple[str, bool, bool, bool]
         extra_days = user.extra_days if user else 0
 
     if sub:
-        plan_name = PLANS.get(sub.plan, {}).get("period", sub.plan) if sub.plan != "trial" else f"Пробный ({sub.plan})"
+        plan_name = PLANS.get(sub.plan, {}).get("period", sub.plan) if sub.plan != "trial" else i18n.t("plan_trial", lang)
         trial_mark = " 🎁" if sub.is_trial else ""
         days_left = max(0, (sub.end_date - datetime.utcnow()).days)
         rotation_pending = bool(sub.new_vpn_key and sub.key_rotation_deadline and sub.key_rotation_deadline > datetime.utcnow())
 
-        text = (
-            f"👤 <b>Личный кабинет</b>\n\n"
-            f"📦 Тариф: <b>{plan_name}{trial_mark}</b>\n"
-            f"📅 Истекает: <b>{sub.end_date.strftime('%d.%m.%Y')}</b> (осталось {days_left} д.)\n"
-        )
+        text = i18n.t("cabinet_title", lang) + "\n\n"
+        text += i18n.t("cabinet_plan", lang, plan=f"{plan_name}{trial_mark}") + "\n"
+        text += i18n.t("cabinet_expires", lang, date=sub.end_date.strftime('%d.%m.%Y'), days=days_left) + "\n"
 
-        # Баннер ротации — показываем оба ключа
         if rotation_pending:
             hours_left = max(0, int((sub.key_rotation_deadline - datetime.utcnow()).total_seconds() // 3600))
-            text += (
-                f"\n\n🔄 <b>Обновление ключей</b>\n"
-                f"⏰ Старый ключ отключится через <b>{hours_left} ч.</b>\n\n"
-                f"<b>Текущий ключ (работает до отключения):</b>"
-                f"{fmt_key(sub.vpn_key, sub.sub_url)}\n\n"
-                f"<b>Новый ключ (переключись сейчас):</b>"
-                f"{fmt_key(sub.new_vpn_key, sub.new_sub_url)}"
-            )
+            text += "\n\n" + i18n.t("cabinet_rotation_title", lang) + "\n"
+            text += i18n.t("cabinet_rotation_deadline", lang, hours=hours_left) + "\n\n"
+            text += i18n.t("cabinet_rotation_old_label", lang)
+            text += fmt_key(sub.vpn_key, sub.sub_url) + "\n\n"
+            text += i18n.t("cabinet_rotation_new_label", lang)
+            text += fmt_key(sub.new_vpn_key, sub.new_sub_url)
         elif sub.vpn_key or sub.sub_url:
-            # Subscription URL — главное, сырой ключ не показываем
             text += fmt_key(sub.vpn_key, sub.sub_url)
         else:
-            text += "\n\n⚠️ <b>Ключ не выдан</b> — обратись в поддержку: @Myst_support"
+            text += "\n\n" + i18n.t("cabinet_no_key_warning", lang)
 
         if extra_days:
-            text += f"\n\n🎁 Бонусных дней: <b>{extra_days}</b>"
+            text += "\n\n" + i18n.t("cabinet_bonus_days", lang, days=extra_days)
         if ref_count:
-            text += f"\n👥 Рефералов: <b>{ref_count}</b>"
+            text += "\n" + i18n.t("cabinet_ref_count", lang, count=ref_count)
         return text, True, bool(sub.vpn_key or sub.sub_url), rotation_pending
 
-    text = (
-        f"👤 <b>Личный кабинет</b>\n\n"
-        f"У тебя нет активной подписки.\n"
-    )
+    text = i18n.t("cabinet_title", lang) + "\n\n" + i18n.t("cabinet_no_active_sub", lang) + "\n"
     if extra_days:
-        text += f"\n🎁 Накоплено реф-дней: <b>{extra_days}</b> (применятся после покупки)"
+        text += "\n" + i18n.t("cabinet_accumulated_days", lang, days=extra_days)
     return text, False, False, False
 
 
@@ -164,14 +155,14 @@ async def get_key(callback: CallbackQuery) -> None:
         sub = await SubscriptionService.get_active(session, user_id)
 
     if not sub:
-        await callback.answer("❌ Нет активной подписки", show_alert=True)
+        await callback.answer(i18n.t("alert_no_active_sub", lang), show_alert=True)
         return
 
     if sub.vpn_key or sub.sub_url:
-        await callback.answer("✅ Ключ уже выдан — обнови кабинет", show_alert=True)
+        await callback.answer(i18n.t("alert_key_already", lang), show_alert=True)
         return
 
-    await callback.answer("⏳ Создаю ключ...")
+    await callback.answer(i18n.t("alert_creating_key", lang))
     days_left = max(1, (sub.end_date - datetime.utcnow()).days)
     vpn_key, sub_url = await XrayService.create_client(user_id, days_left)
 
@@ -179,12 +170,11 @@ async def get_key(callback: CallbackQuery) -> None:
         from services import fmt_key
         async with AsyncSessionLocal() as session:
             await SubscriptionService.save_key(session, sub.id, vpn_key, sub_url)
-        text = f"✅ <b>Ключ успешно получен!</b>{fmt_key(vpn_key, sub_url)}"
+        text = i18n.t("alert_key_received", lang) + fmt_key(vpn_key, sub_url)
         await callback.message.edit_text(text, reply_markup=back_keyboard("menu_cabinet", lang), parse_mode="HTML")
     else:
         await callback.message.edit_text(
-            "❌ <b>Не удалось подключиться к VPN-панели.</b>\n\n"
-            "Попробуй позже или напиши в поддержку: @Myst_support",
+            i18n.t("alert_xray_error", lang),
             reply_markup=back_keyboard("menu_cabinet", lang),
             parse_mode="HTML",
         )
