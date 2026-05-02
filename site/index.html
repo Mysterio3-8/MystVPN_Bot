@@ -3,597 +3,574 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MystVPN — Защищённый туннель для свободного интернета</title>
-  <meta name="description" content="Защищённый туннель для свободного интернета. Telegram, Instagram, YouTube — без ограничений. От 150 ₽/мес. 3 дня бесплатно.">
-  <meta name="keywords" content="VPN, WireGuard, Telegram, защищённый туннель, обход блокировок, приватность">
+  <title>MystVPN — быстрый VPN в Telegram</title>
+  <meta name="description" content="MystVPN — VPN через Telegram-бота @MysterioVPN_bot. 3 дня бесплатно, VLESS Reality, XHTTP, подписки от 219 ₽, поддержка всех устройств.">
+  <meta name="keywords" content="MystVPN, VPN, Telegram VPN, VLESS Reality, XHTTP, Hiddify, v2rayTUN, VPN для России">
   <meta name="author" content="MystVPN">
   <meta name="robots" content="index, follow">
+  <meta property="og:title" content="MystVPN — быстрый VPN в Telegram">
+  <meta property="og:description" content="Подключи VPN за 60 секунд: 3 дня бесплатно, бот в Telegram, поддержка Android, iPhone, Windows и Mac.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://keybest.cc/">
   <style>
     :root {
-      --bg: #08090d;
-      --bg2: #0d0f18;
-      --bg3: #131624;
-      --border: rgba(255,255,255,0.07);
-      --accent: #6366f1;
-      --accent2: #8b5cf6;
-      --accent3: #a78bfa;
-      --text: #f0f0f8;
-      --muted: #8892a4;
-      --card: rgba(255,255,255,0.03);
-      --success: #4ade80;
+      --bg: #f7f7f2;
+      --surface: #ffffff;
+      --surface-2: #efeee7;
+      --ink: #11110f;
+      --muted: #696963;
+      --soft: #8a8a82;
+      --line: #deddd5;
+      --line-strong: #c8c6bb;
+      --accent: #11110f;
+      --green: #1f8a54;
+      --blue: #2867d8;
+      --amber: #a66900;
+      --radius: 8px;
+      --shadow: 0 24px 80px rgba(17, 17, 15, .10);
     }
-    * { margin:0; padding:0; box-sizing:border-box; }
+
+    * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(rgba(17,17,15,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(17,17,15,.035) 1px, transparent 1px),
+        var(--bg);
+      background-size: 48px 48px;
+      color: var(--ink);
+      line-height: 1.5;
+      letter-spacing: 0;
     }
 
-    /* ── NAVIGATION (улучшенная доступность) ── */
-    nav {
-      position: fixed; top:0; left:0; right:0; z-index:100;
-      backdrop-filter: blur(20px);
-      background: rgba(8,9,13,0.85);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 60px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .nav-logo {
-      font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #fff 0%, var(--accent3) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      text-decoration: none;
-    }
-    .nav-right { display:flex; align-items:center; gap:8px; }
-    .nav-btn {
-      padding: 7px 14px; border-radius: 8px; font-size:13px; font-weight:600;
-      cursor:pointer; text-decoration:none; transition: all .2s; border:none;
-      font-family: inherit;
-    }
-    .nav-lang {
-      background: var(--card); border: 1px solid var(--border);
-      color: var(--muted); font-size:13px;
-    }
-    .nav-lang:hover { color: var(--text); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); }
-    .nav-support { background: transparent; color: var(--muted); }
-    .nav-support:hover { color: var(--text); background: rgba(255,255,255,0.03);}
-    .nav-cta {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(99,102,241,.35);
-    }
-    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,.5); }
+    a { color: inherit; }
+    .page { min-height: 100vh; }
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
 
-    /* ── BREADCRUMBS (SEO + удобство) ── */
-    .breadcrumb {
-      background: rgba(8,9,13,0.7);
-      backdrop-filter: blur(8px);
-      padding: 10px 24px;
-      font-size: 12px;
-      position: fixed;
-      top: 60px;
-      left: 0;
-      right: 0;
-      z-index: 99;
-      border-bottom: 1px solid var(--border);
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(247, 247, 242, .82);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(17,17,15,.08);
     }
-    .breadcrumb ol {
-      max-width: 1100px;
-      margin: 0 auto;
+    .nav-inner {
+      height: 64px;
       display: flex;
-      gap: 8px;
-      list-style: none;
-      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
     }
-    .breadcrumb a {
-      color: var(--accent3);
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 760;
       text-decoration: none;
+      font-size: 18px;
     }
-    .breadcrumb a:hover { text-decoration: underline; }
-    .breadcrumb li:not(:last-child)::after {
-      content: "›";
-      margin-left: 8px;
-      color: var(--muted);
+    .mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--ink);
+      color: var(--bg);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .nav-links { display: flex; align-items: center; gap: 22px; color: var(--muted); font-size: 14px; }
+    .nav-links a { text-decoration: none; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+    select {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.65);
+      color: var(--ink);
+      padding: 0 10px;
+      font: inherit;
+      font-size: 13px;
     }
 
-    /* ── HERO (улучшенный контраст) ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      text-decoration: none;
+      font-weight: 650;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--ink); }
+    .btn.primary {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .btn.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(17,17,15,.18); }
+
     .hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      position: relative; overflow: hidden;
+      padding: 86px 0 52px;
+      border-bottom: 1px solid rgba(17,17,15,.08);
     }
-    .hero-glow {
-      position: absolute;
-      width: 800px; height: 800px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
-      top: 50%; left: 50%; transform: translate(-50%,-50%);
-      pointer-events: none;
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.7);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 620;
     }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25);
-      border-radius: 100px; padding: 6px 14px; font-size: 13px; color: var(--accent3);
-      margin-bottom: 28px; font-weight: 600;
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(31,138,84,.12); }
+    h1 {
+      margin: 26px 0 18px;
+      max-width: 980px;
+      font-size: clamp(48px, 8vw, 104px);
+      line-height: .95;
+      letter-spacing: -0.055em;
+      font-weight: 780;
     }
-    .hero-badge span { width:6px; height:6px; border-radius:50%; background:var(--success); display:inline-block; box-shadow: 0 0 8px var(--success); }
-    .hero h1 {
-      font-size: clamp(36px, 7vw, 80px); font-weight: 800; letter-spacing: -2px;
-      line-height: 1.1; margin-bottom: 20px; max-width: 800px;
+    .lead {
+      max-width: 700px;
+      color: var(--muted);
+      font-size: clamp(18px, 2vw, 22px);
+      margin: 0 0 30px;
     }
-    .hero h1 .grad {
-      background: linear-gradient(135deg, #fff 30%, var(--accent3) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .hero p {
-      font-size: clamp(16px, 2.5vw, 20px); color: var(--muted);
-      max-width: 550px; margin: 0 auto 40px;
-    }
-    .hero-btns { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 12px;
-      font-size: 16px; font-weight: 700; transition: all .2s;
-      box-shadow: 0 6px 24px rgba(99,102,241,.4);
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(99,102,241,.6); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-      color: var(--text); text-decoration: none; padding: 14px 28px; border-radius: 12px;
-      font-size: 16px; font-weight: 600; transition: all .2s;
-    }
-    .btn-secondary:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.2); }
-    .hero-stats {
-      display: flex; gap: 40px; margin-top: 60px; flex-wrap: wrap; justify-content: center;
-    }
-    .stat { text-align: center; }
-    .stat-num { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .stat-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .fineprint { color: var(--soft); font-size: 13px; margin-top: 14px; }
 
-    /* ── SECTION COMMON ── */
-    section { padding: 100px 24px; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-      color: var(--accent3); margin-bottom: 12px;
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 36px;
+      align-items: end;
+      margin-top: 58px;
     }
-    .section-title {
-      font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -1px;
-      margin-bottom: 16px;
+    .terminal {
+      border: 1px solid var(--line-strong);
+      background: #151513;
+      color: #e9e7db;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
     }
-    .section-sub { font-size: 17px; color: var(--muted); max-width: 500px; margin-bottom: 24px; }
+    .terminal-top, .phone-top {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      color: #a9a79c;
+      font-size: 13px;
+    }
+    .lights span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+    .lights span:nth-child(1) { background: #ff5f56; }
+    .lights span:nth-child(2) { background: #ffbd2e; }
+    .lights span:nth-child(3) { background: #27c93f; }
+    .terminal-body { padding: 18px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; min-height: 280px; }
+    .line { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .line:last-child { border-bottom: 0; }
+    .ok { color: #76d99d; }
+    .warn { color: #ffd37a; }
 
-    /* ── FEATURES GRID ── */
-    .features-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px; margin-top: 56px;
-    }
-    .feature-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 28px;
-      transition: all .2s;
-    }
-    .feature-card:hover { border-color: rgba(99,102,241,.3); transform: translateY(-2px); background: rgba(255,255,255,0.04);}
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: 12px; margin-bottom: 16px;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-      background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(139,92,246,.1));
-    }
-    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
-
-    /* ── HOW IT WORKS ── */
-    .how-section { background: var(--bg2); }
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 56px; }
-    .step-card {
-      position: relative; padding: 32px; background: var(--bg3);
-      border: 1px solid var(--border); border-radius: 20px;
-    }
-    .step-num {
-      font-size: 56px; font-weight: 900; line-height: 1;
-      background: linear-gradient(135deg, rgba(99,102,241,.4), rgba(139,92,246,.2));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      margin-bottom: 16px;
-    }
-    .step-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .step-card p { font-size: 14px; color: var(--muted); }
-
-    /* ── PRICING (исправлены семантические списки) ── */
-    .pricing-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px; margin-top: 56px;
-    }
-    .price-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 20px; padding: 28px; position: relative; transition: all .2s;
-      display: flex; flex-direction: column;
-    }
-    .price-card:hover { border-color: rgba(99,102,241,.35); transform: translateY(-3px); }
-    .price-card.popular {
-      background: linear-gradient(160deg, rgba(99,102,241,.12), rgba(139,92,246,.07));
-      border-color: rgba(99,102,241,.4);
-      box-shadow: 0 0 0 1px rgba(99,102,241,.3), 0 20px 40px rgba(99,102,241,.15);
-    }
-    .popular-badge {
-      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff; font-size: 11px; font-weight: 700; padding: 4px 14px;
-      border-radius: 100px; white-space: nowrap; letter-spacing: 0.5px;
-    }
-    .price-period { font-size: 14px; color: var(--muted); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-    .price-amount { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
-    .price-amount span { font-size: 16px; font-weight: 500; color: var(--muted); }
-    .price-save { font-size: 12px; color: var(--success); font-weight: 700; margin-top: 4px; }
-    .price-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-    .price-features { flex: 1; list-style: none; }
-    .price-features li { font-size: 14px; color: var(--muted); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
-    .price-features li::before { content: "✓"; color: var(--success); font-weight: 700; flex-shrink: 0; }
-    .price-btn {
-      display: block; text-align: center; margin-top: 24px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 10px;
-      font-size: 14px; font-weight: 700; transition: all .2s;
-      box-shadow: 0 4px 14px rgba(99,102,241,.3);
-    }
-    .price-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,.5); }
-
-    /* ── PLATFORMS (семантика) ── */
-    .platforms-section { background: var(--bg2); }
-    .platforms-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px; margin-top: 48px;
-    }
-    .platform-card {
-      background: var(--bg3); border: 1px solid var(--border); border-radius: 14px;
-      padding: 24px; text-align: center; transition: all .2s;
-    }
-    .platform-card:hover { border-color: rgba(99,102,241,.3); background: rgba(99,102,241,.05);}
-    .platform-icon { font-size: 36px; margin-bottom: 10px; }
-    .platform-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .platform-card p { font-size: 13px; color: var(--muted); }
-
-    /* ── FAQ (улучшенная доступность) ── */
-    .faq-list { margin-top: 48px; display: flex; flex-direction: column; gap: 12px; }
-    .faq-item {
-      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    .phone {
+      border: 1px solid var(--line-strong);
+      border-radius: 28px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
       overflow: hidden;
     }
-    .faq-question {
-      padding: 20px 24px; font-size: 15px; font-weight: 600;
-      display: flex; justify-content: space-between; align-items: center; gap: 16px;
-      cursor: pointer;
-      background: transparent;
-      border: none;
-      width: 100%;
-      text-align: left;
-      font-family: inherit;
-      color: inherit;
+    .phone-top { border-bottom-color: var(--line); color: var(--muted); justify-content: space-between; }
+    .chat { padding: 18px; background: #f1f0e9; }
+    .bubble {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      font-size: 14px;
     }
-    .faq-question:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: -2px;
-      border-radius: 14px;
-    }
-    .faq-arrow { color: var(--muted); font-size: 18px; transition: transform .2s; flex-shrink: 0; }
-    .faq-item.open .faq-arrow { transform: rotate(180deg); }
-    .faq-answer {
-      padding: 0 24px; max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s;
-      font-size: 14px; color: var(--muted); line-height: 1.7;
-    }
-    .faq-item.open .faq-answer { max-height: 500px; padding: 0 24px 20px; }
+    .bubble.user { background: var(--ink); color: var(--bg); margin-left: 56px; border-color: var(--ink); }
+    .mini-buttons { display: grid; gap: 8px; margin-top: 12px; }
+    .mini-buttons span { display: block; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fafaf7; font-weight: 650; text-align: center; }
 
-    /* ── CTA ── */
-    .cta-banner {
-      background: linear-gradient(135deg, rgba(99,102,241,.15) 0%, rgba(139,92,246,.1) 100%);
-      border: 1px solid rgba(99,102,241,.25); border-radius: 24px;
-      padding: 64px 40px; text-align: center; margin: 0 24px;
-    }
-    .cta-banner h2 { font-size: clamp(24px,4vw,40px); font-weight: 800; margin-bottom: 12px; }
-    .cta-banner p { color: var(--muted); font-size: 17px; margin-bottom: 32px; }
+    section { padding: 84px 0; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 28px; margin-bottom: 30px; }
+    .kicker { color: var(--muted); font-weight: 720; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; }
+    h2 { margin: 8px 0 0; font-size: clamp(34px, 5vw, 62px); line-height: 1; letter-spacing: -0.045em; font-weight: 760; }
+    .section-copy { max-width: 460px; color: var(--muted); font-size: 17px; }
 
-    /* ── FOOTER ── */
-    footer {
-      border-top: 1px solid var(--border); padding: 40px 24px;
-      text-align: center; color: var(--muted); font-size: 13px;
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.68);
+      border-radius: var(--radius);
+      padding: 22px;
     }
-    .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-    .footer-links a { color: var(--muted); text-decoration: none; transition: color .2s; }
-    .footer-links a:hover { color: var(--text); text-decoration: underline; }
+    .card h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.015em; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .icon { width: 36px; height: 36px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-2); margin-bottom: 18px; font-weight: 800; }
 
-    /* ── UTILS ── */
-    @media (max-width: 600px) {
-      nav { padding: 0 16px; }
-      .nav-support { display: none; }
-      .hero-stats { gap: 24px; }
-      .cta-banner { padding: 40px 24px; margin: 0 16px; }
-      .hero { padding-top: 100px; }
-      .breadcrumb { display: none; } /* на мобилке прячем для экономии места */
+    .band {
+      background: rgba(255,255,255,.55);
+      border-top: 1px solid rgba(17,17,15,.08);
+      border-bottom: 1px solid rgba(17,17,15,.08);
+    }
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .step { border-left: 1px solid var(--line-strong); padding: 4px 18px 8px; }
+    .num { color: var(--soft); font-size: 13px; font-weight: 760; margin-bottom: 18px; }
+    .step h3 { margin: 0 0 8px; font-size: 18px; }
+    .step p { margin: 0; color: var(--muted); font-size: 15px; }
+
+    .pricing { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .price {
+      position: relative;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.76);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      min-height: 330px;
+    }
+    .price.featured { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow); }
+    .tag { position: absolute; top: 14px; right: 14px; font-size: 12px; font-weight: 760; color: var(--green); }
+    .period { color: var(--muted); font-weight: 700; font-size: 14px; }
+    .amount { margin: 18px 0 6px; font-size: 42px; line-height: 1; letter-spacing: -.04em; font-weight: 780; }
+    .amount span { font-size: 15px; color: var(--muted); font-weight: 520; letter-spacing: 0; }
+    .save { color: var(--green); font-size: 13px; min-height: 20px; }
+    .price ul { list-style: none; padding: 0; margin: 22px 0 20px; color: var(--muted); font-size: 14px; }
+    .price li { margin: 8px 0; }
+    .price li::before { content: "✓"; color: var(--green); margin-right: 8px; font-weight: 800; }
+    .price .btn { margin-top: auto; width: 100%; }
+
+    .wide {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.72);
+      padding: 26px;
+    }
+    .panel h3 { font-size: 26px; line-height: 1.08; letter-spacing: -.035em; margin: 0 0 12px; }
+    .panel p, .panel li { color: var(--muted); }
+    .panel ul { margin: 18px 0 0; padding-left: 18px; }
+
+    .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    details {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.72);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    summary { cursor: pointer; font-weight: 720; }
+    details p { color: var(--muted); margin: 12px 0 0; }
+
+    .cta {
+      padding: 72px 0;
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .cta-inner { display: flex; justify-content: space-between; align-items: center; gap: 28px; }
+    .cta h2 { color: var(--bg); max-width: 720px; }
+    .cta p { color: #c9c7bd; font-size: 18px; margin: 16px 0 0; max-width: 580px; }
+    .cta .btn { background: var(--bg); color: var(--ink); border-color: var(--bg); }
+
+    footer { padding: 34px 0; color: var(--muted); font-size: 14px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 24px; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+    .footer-links a { text-decoration: none; }
+    .footer-links a:hover { color: var(--ink); }
+
+    [dir="rtl"] .bubble.user { margin-left: 0; margin-right: 56px; }
+    [dir="rtl"] .price li::before { margin-right: 0; margin-left: 8px; }
+
+    @media (max-width: 960px) {
+      .nav-links { display: none; }
+      .hero-grid, .wide, .cta-inner { grid-template-columns: 1fr; display: grid; }
+      .cards, .pricing, .steps, .faq { grid-template-columns: 1fr 1fr; }
+      .phone { max-width: 430px; }
+    }
+    @media (max-width: 640px) {
+      .wrap { width: min(100% - 28px, 1180px); }
+      .nav-inner { height: auto; padding: 12px 0; align-items: flex-start; }
+      .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .hero { padding-top: 54px; }
+      .hero-grid { margin-top: 36px; }
+      .cards, .pricing, .steps, .faq { grid-template-columns: 1fr; }
+      .section-head { display: block; }
+      .section-copy { margin-top: 16px; }
+      h1 { font-size: 52px; }
+      .amount { font-size: 38px; }
+      .terminal-body { font-size: 12px; }
     }
   </style>
 </head>
 <body>
+  <div class="page">
+    <nav class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="#" aria-label="MystVPN"><span class="mark">M</span>MystVPN</a>
+        <div class="nav-links" aria-label="Navigation">
+          <a href="#features" data-i18n="nav_features">Возможности</a>
+          <a href="#pricing" data-i18n="nav_pricing">Тарифы</a>
+          <a href="#setup" data-i18n="nav_setup">Подключение</a>
+          <a href="#faq" data-i18n="nav_faq">FAQ</a>
+        </div>
+        <div class="nav-actions">
+          <select id="langSelect" aria-label="Language">
+            <option value="ru">RU</option><option value="en">EN</option><option value="fr">FR</option>
+            <option value="es">ES</option><option value="pt">PT</option><option value="tr">TR</option>
+            <option value="ar">AR</option><option value="fa">FA</option><option value="uk">UK</option>
+            <option value="id">ID</option><option value="zh">ZH</option><option value="ja">JA</option>
+            <option value="ko">KO</option><option value="de">DE</option><option value="vi">VI</option>
+            <option value="ms">MS</option><option value="hi">HI</option>
+          </select>
+          <a class="btn" href="https://t.me/MysterioVPN" target="_blank" rel="noopener noreferrer" data-i18n="nav_channel">Канал</a>
+          <a class="btn primary" href="https://t.me/MysterioVPN_bot?start=trial" target="_blank" rel="noopener noreferrer" data-i18n="nav_bot">Открыть бота</a>
+        </div>
+      </div>
+    </nav>
 
-<!-- NAVIGATION -->
-<nav>
-  <a href="#" class="nav-logo" aria-label="MystVPN Главная">MystVPN</a>
-  <div class="nav-right">
-    <button class="nav-btn nav-lang" id="langBtn" aria-label="Сменить язык">🌐 EN</button>
-    <a href="https://t.me/Myst_support" target="_blank" class="nav-btn nav-support" data-i18n="nav_support" rel="noopener noreferrer">Поддержка</a>
-    <a href="https://t.me/MysterioVPN_bot" target="_blank" class="nav-btn nav-cta" data-i18n="nav_open" rel="noopener noreferrer">Открыть бота →</a>
+    <main>
+      <header class="hero">
+        <div class="wrap">
+          <div class="eyebrow"><span class="dot"></span><span data-i18n="hero_badge">3 дня бесплатно · без карты · в Telegram</span></div>
+          <h1 data-i18n="hero_title">VPN, который подключается быстрее, чем открывается приложение.</h1>
+          <p class="lead" data-i18n="hero_text">MystVPN выдает ключ прямо в официальном боте @MysterioVPN_bot. Работает на телефоне, ноутбуке и ПК, помогает держать доступ к нужным сервисам и не требует сложной настройки.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://t.me/MysterioVPN_bot?start=trial" target="_blank" rel="noopener noreferrer" data-i18n="cta_trial">Попробовать 3 дня</a>
+            <a class="btn" href="https://keybest.cc/guide/" target="_blank" rel="noopener noreferrer" data-i18n="cta_guide">Смотреть инструкцию</a>
+          </div>
+          <div class="fineprint" data-i18n="hero_note">Оплата картой и СБП. Подписка не продлевается без вашего действия.</div>
+
+          <div class="hero-grid" aria-label="MystVPN product preview">
+            <div class="terminal">
+              <div class="terminal-top"><span class="lights"><span></span><span></span><span></span></span><span>MystVPN status</span></div>
+              <div class="terminal-body">
+                <div class="line"><span>protocol</span><span class="ok">VLESS Reality + XHTTP</span></div>
+                <div class="line"><span>setup</span><span class="ok" data-i18n="mock_setup">ключ за 60 секунд</span></div>
+                <div class="line"><span>devices</span><span class="ok">Android · iOS · Windows · macOS</span></div>
+                <div class="line"><span>traffic</span><span class="ok" data-i18n="mock_traffic">безлимитный</span></div>
+                <div class="line"><span>trial</span><span class="warn" data-i18n="mock_trial">3 дня бесплатно</span></div>
+                <div class="line"><span>support</span><span class="ok">@Myst_support</span></div>
+              </div>
+            </div>
+            <div class="phone">
+              <div class="phone-top"><span>@MysterioVPN_bot</span><span>online</span></div>
+              <div class="chat">
+                <div class="bubble" data-i18n="chat_1">Выберите тариф или активируйте пробный период.</div>
+                <div class="bubble user" data-i18n="chat_2">🎁 3 дня бесплатно</div>
+                <div class="bubble">
+                  <strong data-i18n="chat_3">Пробный период активирован.</strong>
+                  <div class="mini-buttons">
+                    <span data-i18n="chat_btn_1">Открыть ключ</span>
+                    <span data-i18n="chat_btn_2">Инструкция</span>
+                    <span data-i18n="chat_btn_3">Личный кабинет</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <div><div class="kicker" data-i18n="features_kicker">Возможности</div><h2 data-i18n="features_title">Сервис без лишнего шума.</h2></div>
+            <p class="section-copy" data-i18n="features_text">Вместо кабинетов, форм и ручной выдачи ключей — понятный Telegram-бот, стабильные протоколы и короткая инструкция для каждого устройства.</p>
+          </div>
+          <div class="cards">
+            <article class="card"><div class="icon">01</div><h3 data-i18n="f1_title">Ключ сразу после оплаты</h3><p data-i18n="f1_text">Бот создает VPN-доступ автоматически: пробник, покупка, подарок и продление работают без ожидания менеджера.</p></article>
+            <article class="card"><div class="icon">02</div><h3 data-i18n="f2_title">Reality и XHTTP</h3><p data-i18n="f2_text">Два профиля в одной подписке. Если один маршрут работает хуже, клиент может переключиться на резервный.</p></article>
+            <article class="card"><div class="icon">03</div><h3 data-i18n="f3_title">Все популярные клиенты</h3><p data-i18n="f3_text">Hiddify, v2rayTUN, V2RayNG, FoXray и Streisand. Подходит для Android, iPhone, Windows и Mac.</p></article>
+            <article class="card"><div class="icon">04</div><h3 data-i18n="f4_title">Честный срок доступа</h3><p data-i18n="f4_text">Ключ отключается по окончании подписки. В кабинете всегда видно, сколько дней осталось.</p></article>
+            <article class="card"><div class="icon">05</div><h3 data-i18n="f5_title">Реферальные бонусы</h3><p data-i18n="f5_text">Приглашайте друзей: они получают 3 дня, вы получаете бонусные дни к своей подписке.</p></article>
+            <article class="card"><div class="icon">06</div><h3 data-i18n="f6_title">Поддержка рядом</h3><p data-i18n="f6_text">Канал @MysterioVPN, поддержка @Myst_support и инструкция на сайте помогают быстро решить проблемы подключения.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="setup">
+        <div class="wrap">
+          <div class="section-head">
+            <div><div class="kicker" data-i18n="setup_kicker">Подключение</div><h2 data-i18n="setup_title">От Telegram до VPN за 4 шага.</h2></div>
+            <p class="section-copy" data-i18n="setup_text">Пользователь не разбирается в протоколах. Он нажимает кнопку, копирует подписку или открывает ее в приложении и подключается.</p>
+          </div>
+          <div class="steps">
+            <div class="step"><div class="num">01</div><h3 data-i18n="s1_title">Откройте бота</h3><p data-i18n="s1_text">Перейдите в @MysterioVPN_bot и запустите пробник или выберите тариф.</p></div>
+            <div class="step"><div class="num">02</div><h3 data-i18n="s2_title">Получите подписку</h3><p data-i18n="s2_text">Бот отправит ссылку подписки и готовый ключ для VPN-клиента.</p></div>
+            <div class="step"><div class="num">03</div><h3 data-i18n="s3_title">Добавьте в приложение</h3><p data-i18n="s3_text">Откройте ссылку в Hiddify, v2rayTUN или другом рекомендованном клиенте.</p></div>
+            <div class="step"><div class="num">04</div><h3 data-i18n="s4_title">Включите VPN</h3><p data-i18n="s4_text">Проверьте доступ, сохраните кабинет и продлевайте подписку в один клик.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing">
+        <div class="wrap">
+          <div class="section-head">
+            <div><div class="kicker" data-i18n="pricing_kicker">Тарифы</div><h2 data-i18n="pricing_title">Прозрачные цены.</h2></div>
+            <p class="section-copy" data-i18n="pricing_text">Можно начать с бесплатного пробника. Чем дольше срок, тем ниже цена за месяц.</p>
+          </div>
+          <div class="pricing">
+            <article class="price"><div class="period" data-i18n="p1_period">1 месяц</div><div class="amount">219 <span>₽</span></div><div class="save">&nbsp;</div><ul><li data-i18n="pf1">Безлимитный трафик</li><li data-i18n="pf2">Все устройства</li><li data-i18n="pf3">Поддержка</li></ul><a class="btn" href="https://t.me/MysterioVPN_bot" target="_blank" rel="noopener noreferrer" data-i18n="buy">Купить в боте</a></article>
+            <article class="price featured"><div class="tag" data-i18n="popular">Популярный</div><div class="period" data-i18n="p2_period">3 месяца</div><div class="amount">549 <span>₽</span></div><div class="save" data-i18n="p2_save">183 ₽/мес · экономия 16%</div><ul><li data-i18n="pf1">Безлимитный трафик</li><li data-i18n="pf2">Все устройства</li><li data-i18n="pf4">Лучший старт</li></ul><a class="btn primary" href="https://t.me/MysterioVPN_bot" target="_blank" rel="noopener noreferrer" data-i18n="buy">Купить в боте</a></article>
+            <article class="price"><div class="period" data-i18n="p3_period">6 месяцев</div><div class="amount">999 <span>₽</span></div><div class="save" data-i18n="p3_save">167 ₽/мес · экономия 24%</div><ul><li data-i18n="pf1">Безлимитный трафик</li><li data-i18n="pf2">Все устройства</li><li data-i18n="pf5">Меньше продлений</li></ul><a class="btn" href="https://t.me/MysterioVPN_bot" target="_blank" rel="noopener noreferrer" data-i18n="buy">Купить в боте</a></article>
+            <article class="price"><div class="period" data-i18n="p4_period">1 год</div><div class="amount">1799 <span>₽</span></div><div class="save" data-i18n="p4_save">150 ₽/мес · экономия 32%</div><ul><li data-i18n="pf1">Безлимитный трафик</li><li data-i18n="pf2">Все устройства</li><li data-i18n="pf6">Максимальная выгода</li></ul><a class="btn" href="https://t.me/MysterioVPN_bot" target="_blank" rel="noopener noreferrer" data-i18n="buy">Купить в боте</a></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="wrap wide">
+          <div class="panel">
+            <h3 data-i18n="tech_title">Технологии под нестабильные сети.</h3>
+            <p data-i18n="tech_text">MystVPN использует VLESS Reality и резервный XHTTP-профиль. Это помогает сохранить подключение в ситуациях, где обычные VPN-профили часто ломаются.</p>
+            <ul>
+              <li data-i18n="tech_l1">Subscription URL для быстрой настройки.</li>
+              <li data-i18n="tech_l2">Автоматическая выдача и продление ключа.</li>
+              <li data-i18n="tech_l3">Удаление ключа после окончания подписки.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3 data-i18n="devices_title">Один сервис для всех устройств.</h3>
+            <p data-i18n="devices_text">Настройте телефон, ноутбук и домашний компьютер. Бот хранит кабинет, срок подписки, инструкцию и ссылку для обновления профиля.</p>
+            <ul>
+              <li>Android: Hiddify, v2rayTUN, V2RayNG</li>
+              <li>iPhone / iPad: Hiddify, Streisand, FoXray</li>
+              <li>Windows / macOS: Hiddify, Nekoray, v2rayN</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <div class="section-head">
+            <div><div class="kicker">FAQ</div><h2 data-i18n="faq_title">Ответы до покупки.</h2></div>
+            <p class="section-copy" data-i18n="faq_text">Если останутся вопросы, напишите в поддержку. Ссылка всегда есть в боте и внизу сайта.</p>
+          </div>
+          <div class="faq">
+            <details><summary data-i18n="q1">Что будет после окончания пробника?</summary><p data-i18n="a1">Ключ перестанет работать. Чтобы продолжить, выберите тариф в боте и оплатите подписку.</p></details>
+            <details><summary data-i18n="q2">Можно ли пользоваться на нескольких устройствах?</summary><p data-i18n="a2">Да. Один профиль можно добавить на телефон, планшет, ноутбук и ПК.</p></details>
+            <details><summary data-i18n="q3">Какие способы оплаты доступны?</summary><p data-i18n="a3">В боте доступны оплата картой и СБП через YooKassa. Также поддерживаются подарки и промокоды.</p></details>
+            <details><summary data-i18n="q4">Российские банки будут работать?</summary><p data-i18n="a4">Для банков и госуслуг лучше включить bypass в VPN-клиенте. В кабинете есть отдельная подсказка с правилами маршрутизации.</p></details>
+            <details><summary data-i18n="q5">Где получить помощь?</summary><p data-i18n="a5">Поддержка: @Myst_support. Новости и статусы сервиса: @MysterioVPN.</p></details>
+            <details><summary data-i18n="q6">Как быстро выдается ключ?</summary><p data-i18n="a6">Обычно сразу после пробника или оплаты. Если панель временно недоступна, в кабинете появится кнопка повторной выдачи.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div class="wrap cta-inner">
+          <div><h2 data-i18n="final_title">Попробуйте MystVPN до оплаты.</h2><p data-i18n="final_text">Откройте официальный бот, активируйте 3 дня и подключите первое устройство по инструкции.</p></div>
+          <a class="btn" href="https://t.me/MysterioVPN_bot?start=trial" target="_blank" rel="noopener noreferrer" data-i18n="final_btn">Запустить бота</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap footer-inner">
+        <div>© 2026 MystVPN</div>
+        <div class="footer-links">
+          <a href="https://t.me/MysterioVPN_bot" target="_blank" rel="noopener noreferrer" data-i18n="foot_bot">Бот</a>
+          <a href="https://t.me/MysterioVPN" target="_blank" rel="noopener noreferrer" data-i18n="foot_channel">Канал</a>
+          <a href="https://t.me/Myst_support" target="_blank" rel="noopener noreferrer" data-i18n="foot_support">Поддержка</a>
+          <a href="https://keybest.cc/guide/" target="_blank" rel="noopener noreferrer" data-i18n="foot_guide">Инструкция</a>
+          <a href="https://teletype.in/@mystadm/X2oafHAItL9" target="_blank" rel="noopener noreferrer" data-i18n="foot_terms">Оферта</a>
+        </div>
+      </div>
+    </footer>
   </div>
-</nav>
 
-<!-- BREADCRUMBS (SEO) -->
-<div class="breadcrumb" aria-label="Хлебные крошки">
-  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
-    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem"><a href="#" itemprop="item"><span itemprop="name">Главная</span></a><meta itemprop="position" content="1"></li>
-    <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem"><span itemprop="name">VPN сервис</span><meta itemprop="position" content="2"></li>
-  </ol>
-</div>
+  <script>
+    const base = {
+      ru: {
+        nav_features:"Возможности", nav_pricing:"Тарифы", nav_setup:"Подключение", nav_faq:"FAQ", nav_channel:"Канал", nav_bot:"Открыть бота",
+        hero_badge:"3 дня бесплатно · без карты · в Telegram", hero_title:"VPN, который подключается быстрее, чем открывается приложение.", hero_text:"MystVPN выдает ключ прямо в официальном боте @MysterioVPN_bot. Работает на телефоне, ноутбуке и ПК, помогает держать доступ к нужным сервисам и не требует сложной настройки.", cta_trial:"Попробовать 3 дня", cta_guide:"Смотреть инструкцию", hero_note:"Оплата картой и СБП. Подписка не продлевается без вашего действия.",
+        mock_setup:"ключ за 60 секунд", mock_traffic:"безлимитный", mock_trial:"3 дня бесплатно", chat_1:"Выберите тариф или активируйте пробный период.", chat_2:"🎁 3 дня бесплатно", chat_3:"Пробный период активирован.", chat_btn_1:"Открыть ключ", chat_btn_2:"Инструкция", chat_btn_3:"Личный кабинет",
+        features_kicker:"Возможности", features_title:"Сервис без лишнего шума.", features_text:"Вместо кабинетов, форм и ручной выдачи ключей — понятный Telegram-бот, стабильные протоколы и короткая инструкция для каждого устройства.",
+        f1_title:"Ключ сразу после оплаты", f1_text:"Бот создает VPN-доступ автоматически: пробник, покупка, подарок и продление работают без ожидания менеджера.", f2_title:"Reality и XHTTP", f2_text:"Два профиля в одной подписке. Если один маршрут работает хуже, клиент может переключиться на резервный.", f3_title:"Все популярные клиенты", f3_text:"Hiddify, v2rayTUN, V2RayNG, FoXray и Streisand. Подходит для Android, iPhone, Windows и Mac.", f4_title:"Честный срок доступа", f4_text:"Ключ отключается по окончании подписки. В кабинете всегда видно, сколько дней осталось.", f5_title:"Реферальные бонусы", f5_text:"Приглашайте друзей: они получают 3 дня, вы получаете бонусные дни к своей подписке.", f6_title:"Поддержка рядом", f6_text:"Канал @MysterioVPN, поддержка @Myst_support и инструкция на сайте помогают быстро решить проблемы подключения.",
+        setup_kicker:"Подключение", setup_title:"От Telegram до VPN за 4 шага.", setup_text:"Пользователь не разбирается в протоколах. Он нажимает кнопку, копирует подписку или открывает ее в приложении и подключается.", s1_title:"Откройте бота", s1_text:"Перейдите в @MysterioVPN_bot и запустите пробник или выберите тариф.", s2_title:"Получите подписку", s2_text:"Бот отправит ссылку подписки и готовый ключ для VPN-клиента.", s3_title:"Добавьте в приложение", s3_text:"Откройте ссылку в Hiddify, v2rayTUN или другом рекомендованном клиенте.", s4_title:"Включите VPN", s4_text:"Проверьте доступ, сохраните кабинет и продлевайте подписку в один клик.",
+        pricing_kicker:"Тарифы", pricing_title:"Прозрачные цены.", pricing_text:"Можно начать с бесплатного пробника. Чем дольше срок, тем ниже цена за месяц.", p1_period:"1 месяц", p2_period:"3 месяца", p3_period:"6 месяцев", p4_period:"1 год", p2_save:"183 ₽/мес · экономия 16%", p3_save:"167 ₽/мес · экономия 24%", p4_save:"150 ₽/мес · экономия 32%", popular:"Популярный", pf1:"Безлимитный трафик", pf2:"Все устройства", pf3:"Поддержка", pf4:"Лучший старт", pf5:"Меньше продлений", pf6:"Максимальная выгода", buy:"Купить в боте",
+        tech_title:"Технологии под нестабильные сети.", tech_text:"MystVPN использует VLESS Reality и резервный XHTTP-профиль. Это помогает сохранить подключение в ситуациях, где обычные VPN-профили часто ломаются.", tech_l1:"Subscription URL для быстрой настройки.", tech_l2:"Автоматическая выдача и продление ключа.", tech_l3:"Удаление ключа после окончания подписки.", devices_title:"Один сервис для всех устройств.", devices_text:"Настройте телефон, ноутбук и домашний компьютер. Бот хранит кабинет, срок подписки, инструкцию и ссылку для обновления профиля.",
+        faq_title:"Ответы до покупки.", faq_text:"Если останутся вопросы, напишите в поддержку. Ссылка всегда есть в боте и внизу сайта.", q1:"Что будет после окончания пробника?", a1:"Ключ перестанет работать. Чтобы продолжить, выберите тариф в боте и оплатите подписку.", q2:"Можно ли пользоваться на нескольких устройствах?", a2:"Да. Один профиль можно добавить на телефон, планшет, ноутбук и ПК.", q3:"Какие способы оплаты доступны?", a3:"В боте доступны оплата картой и СБП через YooKassa. Также поддерживаются подарки и промокоды.", q4:"Российские банки будут работать?", a4:"Для банков и госуслуг лучше включить bypass в VPN-клиенте. В кабинете есть отдельная подсказка с правилами маршрутизации.", q5:"Где получить помощь?", a5:"Поддержка: @Myst_support. Новости и статусы сервиса: @MysterioVPN.", q6:"Как быстро выдается ключ?", a6:"Обычно сразу после пробника или оплаты. Если панель временно недоступна, в кабинете появится кнопка повторной выдачи.",
+        final_title:"Попробуйте MystVPN до оплаты.", final_text:"Откройте официальный бот, активируйте 3 дня и подключите первое устройство по инструкции.", final_btn:"Запустить бота", foot_bot:"Бот", foot_channel:"Канал", foot_support:"Поддержка", foot_guide:"Инструкция", foot_terms:"Оферта"
+      },
+      en: {
+        nav_features:"Features", nav_pricing:"Pricing", nav_setup:"Setup", nav_faq:"FAQ", nav_channel:"Channel", nav_bot:"Open bot",
+        hero_badge:"3 days free · no card · in Telegram", hero_title:"A VPN that connects faster than an app opens.", hero_text:"MystVPN gives you a key directly in the official @MysterioVPN_bot. It works on phones, laptops and desktops, keeps access to the services you need, and does not require complex setup.", cta_trial:"Try 3 days", cta_guide:"View guide", hero_note:"Card and SBP payments. Subscription does not renew without your action.",
+        mock_setup:"key in 60 seconds", mock_traffic:"unlimited", mock_trial:"3 days free", chat_1:"Choose a plan or activate a trial.", chat_2:"🎁 3 days free", chat_3:"Trial activated.", chat_btn_1:"Open key", chat_btn_2:"Guide", chat_btn_3:"Cabinet",
+        features_kicker:"Features", features_title:"A service without noise.", features_text:"Instead of forms and manual key delivery: a clear Telegram bot, stable protocols and a short guide for every device.",
+        f1_title:"Key right after payment", f1_text:"The bot creates VPN access automatically: trial, purchase, gift and renewal work without waiting for a manager.", f2_title:"Reality and XHTTP", f2_text:"Two profiles in one subscription. If one route is worse, the client can switch to backup.", f3_title:"Popular clients", f3_text:"Hiddify, v2rayTUN, V2RayNG, FoXray and Streisand. Works for Android, iPhone, Windows and Mac.", f4_title:"Honest access time", f4_text:"The key stops when the subscription ends. The cabinet always shows days left.", f5_title:"Referral bonuses", f5_text:"Invite friends: they get 3 days, you get bonus days for your subscription.", f6_title:"Support nearby", f6_text:"The @MysterioVPN channel, @Myst_support and the site guide help solve setup issues quickly.",
+        setup_kicker:"Setup", setup_title:"From Telegram to VPN in 4 steps.", setup_text:"Users do not need to understand protocols. They press a button, copy a subscription or open it in an app, and connect.", s1_title:"Open the bot", s1_text:"Go to @MysterioVPN_bot and start a trial or choose a plan.", s2_title:"Get subscription", s2_text:"The bot sends a subscription link and a ready key for a VPN client.", s3_title:"Add to app", s3_text:"Open the link in Hiddify, v2rayTUN or another recommended client.", s4_title:"Turn VPN on", s4_text:"Check access, keep your cabinet and renew in one click.",
+        pricing_kicker:"Pricing", pricing_title:"Transparent prices.", pricing_text:"Start with a free trial. Longer periods make the monthly price lower.", p1_period:"1 month", p2_period:"3 months", p3_period:"6 months", p4_period:"1 year", p2_save:"183 ₽/mo · save 16%", p3_save:"167 ₽/mo · save 24%", p4_save:"150 ₽/mo · save 32%", popular:"Popular", pf1:"Unlimited traffic", pf2:"All devices", pf3:"Support", pf4:"Best start", pf5:"Fewer renewals", pf6:"Best value", buy:"Buy in bot",
+        tech_title:"Technology for unstable networks.", tech_text:"MystVPN uses VLESS Reality and backup XHTTP. This helps keep connection where regular VPN profiles often fail.", tech_l1:"Subscription URL for fast setup.", tech_l2:"Automatic key issue and renewal.", tech_l3:"Key removal after subscription ends.", devices_title:"One service for all devices.", devices_text:"Set up your phone, laptop and desktop. The bot stores your cabinet, subscription end date, guide and update link.",
+        faq_title:"Answers before purchase.", faq_text:"If questions remain, contact support. The link is always in the bot and site footer.", q1:"What happens after trial ends?", a1:"The key stops working. To continue, choose a plan in the bot and pay.", q2:"Can I use multiple devices?", a2:"Yes. One profile can be added to phone, tablet, laptop and PC.", q3:"What payment methods are available?", a3:"Card and SBP payments via YooKassa are available in the bot. Gifts and promo codes are also supported.", q4:"Will local banks work?", a4:"For banks and government services, enable bypass in the VPN client. The cabinet has a routing guide.", q5:"Where can I get help?", a5:"Support: @Myst_support. News and status: @MysterioVPN.", q6:"How fast is key delivery?", a6:"Usually immediately after trial or payment. If the panel is temporarily unavailable, the cabinet has a retry button.",
+        final_title:"Try MystVPN before paying.", final_text:"Open the official bot, activate 3 days and connect your first device using the guide.", final_btn:"Launch bot", foot_bot:"Bot", foot_channel:"Channel", foot_support:"Support", foot_guide:"Guide", foot_terms:"Terms"
+      }
+    };
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-glow" aria-hidden="true"></div>
-  <div class="hero-badge">
-    <span></span>
-    <span data-i18n="badge">Серверы работают · Всё стабильно</span>
-  </div>
-  <h1>
-    <span class="grad" data-i18n="hero_title">Интернет без границ</span><br>
-    <span data-i18n="hero_title2">для всех устройств</span>
-  </h1>
-  <p data-i18n="hero_sub">Защищённый туннель для свободного доступа к интернету. Telegram, Instagram, YouTube — без ограничений.</p>
-  <div class="hero-btns">
-    <a href="https://t.me/MysterioVPN_bot?start=trial" target="_blank" class="btn-primary" rel="noopener noreferrer">
-      🎁 <span data-i18n="hero_cta">3 дня бесплатно</span>
-    </a>
-    <a href="https://t.me/MysterioVPN_bot" target="_blank" class="btn-secondary" rel="noopener noreferrer">
-      <span data-i18n="hero_cta2">Открыть бота</span> →
-    </a>
-  </div>
-  <div class="hero-stats">
-    <div class="stat"><div class="stat-num">10 000+</div><div class="stat-label" data-i18n="stat1">Активных пользователей</div></div>
-    <div class="stat"><div class="stat-num">99.9%</div><div class="stat-label" data-i18n="stat2">Время работы</div></div>
-    <div class="stat"><div class="stat-num">1 Гбит</div><div class="stat-label" data-i18n="stat3">Скорость сервера</div></div>
-  </div>
-</section>
+    const packs = {
+      fr: { hero_title:"Un VPN qui se connecte en quelques secondes.", nav_features:"Fonctions", nav_pricing:"Tarifs", nav_setup:"Installation", nav_faq:"FAQ", nav_channel:"Canal", nav_bot:"Ouvrir le bot", cta_trial:"Essayer 3 jours", cta_guide:"Voir le guide", pricing_title:"Des prix transparents.", buy:"Acheter dans le bot", final_btn:"Lancer le bot" },
+      es: { hero_title:"Un VPN que se conecta en segundos.", nav_features:"Funciones", nav_pricing:"Precios", nav_setup:"Conexión", nav_faq:"FAQ", nav_channel:"Canal", nav_bot:"Abrir bot", cta_trial:"Probar 3 días", cta_guide:"Ver guía", pricing_title:"Precios claros.", buy:"Comprar en el bot", final_btn:"Abrir bot" },
+      pt: { hero_title:"Uma VPN que conecta em segundos.", nav_features:"Recursos", nav_pricing:"Preços", nav_setup:"Configuração", nav_faq:"FAQ", nav_channel:"Canal", nav_bot:"Abrir bot", cta_trial:"Teste 3 dias", cta_guide:"Ver guia", pricing_title:"Preços transparentes.", buy:"Comprar no bot", final_btn:"Abrir bot" },
+      tr: { hero_title:"Saniyeler içinde bağlanan VPN.", nav_features:"Özellikler", nav_pricing:"Fiyatlar", nav_setup:"Kurulum", nav_faq:"SSS", nav_channel:"Kanal", nav_bot:"Botu aç", cta_trial:"3 gün dene", cta_guide:"Kılavuz", pricing_title:"Şeffaf fiyatlar.", buy:"Botta satın al", final_btn:"Botu başlat" },
+      ar: { hero_title:"VPN يتصل خلال ثوان.", nav_features:"المزايا", nav_pricing:"الأسعار", nav_setup:"الإعداد", nav_faq:"الأسئلة", nav_channel:"القناة", nav_bot:"افتح البوت", cta_trial:"جرّب 3 أيام", cta_guide:"الدليل", pricing_title:"أسعار واضحة.", buy:"اشترِ من البوت", final_btn:"تشغيل البوت" },
+      fa: { hero_title:"VPN که در چند ثانیه وصل می‌شود.", nav_features:"قابلیت‌ها", nav_pricing:"قیمت‌ها", nav_setup:"راه‌اندازی", nav_faq:"سوالات", nav_channel:"کانال", nav_bot:"باز کردن ربات", cta_trial:"۳ روز امتحان کن", cta_guide:"راهنما", pricing_title:"قیمت‌گذاری شفاف.", buy:"خرید در ربات", final_btn:"شروع ربات" },
+      uk: { hero_title:"VPN, який підключається за секунди.", nav_features:"Можливості", nav_pricing:"Тарифи", nav_setup:"Підключення", nav_faq:"FAQ", nav_channel:"Канал", nav_bot:"Відкрити бота", cta_trial:"Спробувати 3 дні", cta_guide:"Інструкція", pricing_title:"Прозорі ціни.", buy:"Купити в боті", final_btn:"Запустити бота" },
+      id: { hero_title:"VPN yang tersambung dalam hitungan detik.", nav_features:"Fitur", nav_pricing:"Harga", nav_setup:"Setup", nav_faq:"FAQ", nav_channel:"Kanal", nav_bot:"Buka bot", cta_trial:"Coba 3 hari", cta_guide:"Lihat panduan", pricing_title:"Harga transparan.", buy:"Beli di bot", final_btn:"Mulai bot" },
+      zh: { hero_title:"几秒即可连接的 VPN。", nav_features:"功能", nav_pricing:"价格", nav_setup:"设置", nav_faq:"FAQ", nav_channel:"频道", nav_bot:"打开机器人", cta_trial:"免费试用3天", cta_guide:"查看教程", pricing_title:"透明价格。", buy:"在机器人中购买", final_btn:"启动机器人" },
+      ja: { hero_title:"数秒で接続できるVPN。", nav_features:"機能", nav_pricing:"料金", nav_setup:"設定", nav_faq:"FAQ", nav_channel:"チャンネル", nav_bot:"Botを開く", cta_trial:"3日間試す", cta_guide:"ガイドを見る", pricing_title:"わかりやすい料金。", buy:"Botで購入", final_btn:"Botを起動" },
+      ko: { hero_title:"몇 초 만에 연결되는 VPN.", nav_features:"기능", nav_pricing:"요금", nav_setup:"설정", nav_faq:"FAQ", nav_channel:"채널", nav_bot:"봇 열기", cta_trial:"3일 체험", cta_guide:"가이드 보기", pricing_title:"투명한 가격.", buy:"봇에서 구매", final_btn:"봇 시작" },
+      de: { hero_title:"Ein VPN, das in Sekunden verbindet.", nav_features:"Funktionen", nav_pricing:"Preise", nav_setup:"Einrichtung", nav_faq:"FAQ", nav_channel:"Kanal", nav_bot:"Bot öffnen", cta_trial:"3 Tage testen", cta_guide:"Anleitung", pricing_title:"Klare Preise.", buy:"Im Bot kaufen", final_btn:"Bot starten" },
+      vi: { hero_title:"VPN kết nối trong vài giây.", nav_features:"Tính năng", nav_pricing:"Giá", nav_setup:"Cài đặt", nav_faq:"FAQ", nav_channel:"Kênh", nav_bot:"Mở bot", cta_trial:"Thử 3 ngày", cta_guide:"Xem hướng dẫn", pricing_title:"Giá minh bạch.", buy:"Mua trong bot", final_btn:"Khởi chạy bot" },
+      ms: { hero_title:"VPN yang bersambung dalam beberapa saat.", nav_features:"Ciri", nav_pricing:"Harga", nav_setup:"Tetapan", nav_faq:"FAQ", nav_channel:"Saluran", nav_bot:"Buka bot", cta_trial:"Cuba 3 hari", cta_guide:"Lihat panduan", pricing_title:"Harga jelas.", buy:"Beli dalam bot", final_btn:"Mulakan bot" },
+      hi: { hero_title:"VPN जो कुछ सेकंड में कनेक्ट होता है.", nav_features:"फीचर", nav_pricing:"कीमत", nav_setup:"सेटअप", nav_faq:"FAQ", nav_channel:"चैनल", nav_bot:"बॉट खोलें", cta_trial:"3 दिन आज़माएं", cta_guide:"गाइड देखें", pricing_title:"स्पष्ट कीमतें.", buy:"बॉट में खरीदें", final_btn:"बॉट शुरू करें" }
+    };
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-label" data-i18n="feat_label">Почему MystVPN</div>
-    <h2 class="section-title" data-i18n="feat_title">Всё что нужно от VPN</h2>
-    <p class="section-sub" data-i18n="feat_sub">Никаких компромиссов — скорость, безопасность и простота в одном</p>
-    <div class="features-grid">
-      <div class="feature-card"><div class="feature-icon">⚡</div><h3 data-i18n="f1_title">Молниеносная скорость</h3><p data-i18n="f1_sub">WireGuard-протокол. 1 Гбит/с сервер в Европе. Стриминг без буферизации.</p></div>
-      <div class="feature-card"><div class="feature-icon">📱</div><h3 data-i18n="f2_title">Все приложения</h3><p data-i18n="f2_sub">Telegram, WhatsApp, Instagram, TikTok — работает для каждого приложения без исключений.</p></div>
-      <div class="feature-card"><div class="feature-icon">🔒</div><h3 data-i18n="f3_title">Полная приватность</h3><p data-i18n="f3_sub">Военное шифрование. Логи не ведутся. Никто не знает что ты делаешь в сети.</p></div>
-      <div class="feature-card"><div class="feature-icon">🛡️</div><h3 data-i18n="f4_title">Невидим для блокировок</h3><p data-i18n="f4_sub">XTLS Reality маскирует трафик под обычное обращение к сайтам. ТСПУ и Роскомнадзор не отличают от браузера.</p></div>
-      <div class="feature-card"><div class="feature-icon">💻</div><h3 data-i18n="f5_title">Все устройства</h3><p data-i18n="f5_sub">Android, iPhone, Windows, Mac — один ключ работает на всём. До 10 устройств одновременно.</p></div>
-      <div class="feature-card"><div class="feature-icon">🤖</div><h3 data-i18n="f6_title">Удобно через Telegram</h3><p data-i18n="f6_sub">Покупка, подписка и поддержка — всё в боте. Никаких лишних приложений.</p></div>
-    </div>
-  </div>
-</section>
+    const rtl = new Set(["ar", "fa"]);
+    const data = Object.fromEntries(Object.keys(packs).map(k => [k, { ...base.en, ...packs[k] }]));
+    data.ru = base.ru;
+    data.en = base.en;
 
-<!-- HOW IT WORKS -->
-<section class="how-section" id="how">
-  <div class="container">
-    <div class="section-label" data-i18n="how_label">Как подключиться</div>
-    <h2 class="section-title" data-i18n="how_title">3 шага — и ты в сети</h2>
-    <div class="steps">
-      <div class="step-card"><div class="step-num">01</div><h3 data-i18n="s1_title">Открой бота</h3><p data-i18n="s1_sub">Перейди в @MysterioVPN_bot и выбери тариф. Оплата картой, СБП или Telegram Stars.</p></div>
-      <div class="step-card"><div class="step-num">02</div><h3 data-i18n="s2_title">Получи ключ</h3><p data-i18n="s2_sub">Бот пришлёт файл конфигурации. Установи приложение WireGuard и импортируй файл.</p></div>
-      <div class="step-card"><div class="step-num">03</div><h3 data-i18n="s3_title">Включи и готово</h3><p data-i18n="s3_sub">Один тап — и весь трафик идёт через VPN. Telegram, WhatsApp, всё работает.</p></div>
-    </div>
-    <div style="text-align:center; margin-top:40px;">
-      <a href="https://keybest.cc/guide/" target="_blank" class="btn-secondary" data-i18n="how_more" rel="noopener noreferrer">Подробная инструкция →</a>
-    </div>
-  </div>
-</section>
+    function setLang(lang) {
+      const dict = data[lang] || data.ru;
+      document.documentElement.lang = lang;
+      document.documentElement.dir = rtl.has(lang) ? "rtl" : "ltr";
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.dataset.i18n;
+        if (dict[key]) el.textContent = dict[key];
+      });
+      localStorage.setItem("mystvpn_lang", lang);
+    }
 
-<!-- PRICING -->
-<section id="pricing">
-  <div class="container">
-    <div class="section-label" data-i18n="price_label">Тарифы</div>
-    <h2 class="section-title" data-i18n="price_title">Честные цены</h2>
-    <p class="section-sub" data-i18n="price_sub">Один ключ — все устройства. Никаких скрытых платежей.</p>
-    <div class="pricing-grid">
-      <div class="price-card"><div class="price-period" data-i18n="p1_period">1 месяц</div><div class="price-amount">219 <span>₽/мес</span></div><hr class="price-divider"><ul class="price-features"><li data-i18n="pf1">Все устройства</li><li data-i18n="pf2">Безлимитный трафик</li><li data-i18n="pf3">Все приложения</li><li data-i18n="pf4">Поддержка 24/7</li></ul><a href="https://t.me/MysterioVPN_bot" target="_blank" class="price-btn" data-i18n="price_btn" rel="noopener noreferrer">Купить в боте</a></div>
-      <div class="price-card popular"><div class="popular-badge" data-i18n="popular_badge">🔥 Популярный</div><div class="price-period" data-i18n="p2_period">3 месяца</div><div class="price-amount">183 <span>₽/мес</span></div><div class="price-save" data-i18n="p2_save">Экономия 108 ₽ (−16%)</div><hr class="price-divider"><ul class="price-features"><li data-i18n="pf1">Все устройства</li><li data-i18n="pf2">Безлимитный трафик</li><li data-i18n="pf3">Все приложения</li><li data-i18n="pf4">Поддержка 24/7</li></ul><a href="https://t.me/MysterioVPN_bot" target="_blank" class="price-btn" data-i18n="price_btn" rel="noopener noreferrer">Купить в боте</a></div>
-      <div class="price-card"><div class="price-period" data-i18n="p3_period">6 месяцев</div><div class="price-amount">167 <span>₽/мес</span></div><div class="price-save" data-i18n="p3_save">Экономия 315 ₽ (−24%)</div><hr class="price-divider"><ul class="price-features"><li data-i18n="pf1">Все устройства</li><li data-i18n="pf2">Безлимитный трафик</li><li data-i18n="pf3">Все приложения</li><li data-i18n="pf4">Поддержка 24/7</li></ul><a href="https://t.me/MysterioVPN_bot" target="_blank" class="price-btn" data-i18n="price_btn" rel="noopener noreferrer">Купить в боте</a></div>
-      <div class="price-card"><div class="price-period" data-i18n="p4_period">1 год</div><div class="price-amount">150 <span>₽/мес</span></div><div class="price-save" data-i18n="p4_save">Экономия 829 ₽ (−32%)</div><hr class="price-divider"><ul class="price-features"><li data-i18n="pf1">Все устройства</li><li data-i18n="pf2">Безлимитный трафик</li><li data-i18n="pf3">Все приложения</li><li data-i18n="pf4">Поддержка 24/7</li></ul><a href="https://t.me/MysterioVPN_bot" target="_blank" class="price-btn" data-i18n="price_btn" rel="noopener noreferrer">Купить в боте</a></div>
-    </div>
-  </div>
-</section>
-
-<!-- PLATFORMS -->
-<section class="platforms-section" id="platforms">
-  <div class="container">
-    <div class="section-label" data-i18n="plat_label">Устройства</div>
-    <h2 class="section-title" data-i18n="plat_title">Работает везде</h2>
-    <div class="platforms-grid">
-      <div class="platform-card"><div class="platform-icon">🤖</div><h4>Android</h4><p data-i18n="plat_android">WireGuard — все приложения</p></div>
-      <div class="platform-card"><div class="platform-icon">🍎</div><h4>iPhone / iPad</h4><p data-i18n="plat_ios">WireGuard из App Store</p></div>
-      <div class="platform-card"><div class="platform-icon">🪟</div><h4>Windows</h4><p data-i18n="plat_win">Официальный клиент WireGuard</p></div>
-      <div class="platform-card"><div class="platform-icon">🍏</div><h4>Mac</h4><p data-i18n="plat_mac">WireGuard из Mac App Store</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ (исправлены дублирующиеся атрибуты i18n) -->
-<section id="faq">
-  <div class="container">
-    <div class="section-label">FAQ</div>
-    <h2 class="section-title" data-i18n="faq_title">Частые вопросы</h2>
-    <div class="faq-list">
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this.parentElement)" aria-expanded="false"><span data-i18n="faq1_q">Это законно — использовать защищённый туннель в России?</span><span class="faq-arrow" aria-hidden="true">▾</span></button><div class="faq-answer" data-i18n="faq1_a">Да. Использование VPN физическими лицами не запрещено и не штрафуется. Запрет касается только провайдеров, не подключившихся к реестру Роскомнадзора — это не касается пользователей.</div></div>
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this.parentElement)" aria-expanded="false"><span data-i18n="faq2_q">Почему с VPN работает медленнее?</span><span class="faq-arrow" aria-hidden="true">▾</span></button><div class="faq-answer" data-i18n="faq2_a">MystVPN использует WireGuard — самый быстрый VPN-протокол в мире. Скорость сервера 1 Гбит/с. Замедление обычно не ощущается при просмотре видео и серфинге.</div></div>
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this.parentElement)" aria-expanded="false"><span data-i18n="faq3_q">Сколько устройств можно подключить?</span><span class="faq-arrow" aria-hidden="true">▾</span></button><div class="faq-answer" data-i18n="faq3_a">До 10 устройств одновременно на одну подписку. Телефон, планшет, ноутбук, ПК — всё можно использовать параллельно.</div></div>
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this.parentElement)" aria-expanded="false"><span data-i18n="faq4_q">Telegram и WhatsApp будут работать?</span><span class="faq-arrow" aria-hidden="true">▾</span></button><div class="faq-answer" data-i18n="faq4_a">Да, обязательно. WireGuard работает на уровне ядра ОС и направляет через себя 100% трафика — включая Telegram, WhatsApp, любые другие приложения.</div></div>
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this.parentElement)" aria-expanded="false"><span data-i18n="faq5_q">Как отменить подписку?</span><span class="faq-arrow" aria-hidden="true">▾</span></button><div class="faq-answer" data-i18n="faq5_a">Через бота: Личный кабинет → Отменить подписку. Никаких обязательств — подписка не продлевается автоматически без вашего согласия.</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA BANNER -->
-<section style="padding: 0 0 100px;">
-  <div class="cta-banner">
-    <h2 data-i18n="cta_title">Начни прямо сейчас</h2>
-    <p data-i18n="cta_sub">3 дня бесплатно — без карты, без регистрации</p>
-    <a href="https://t.me/MysterioVPN_bot?start=trial" target="_blank" class="btn-primary" rel="noopener noreferrer">
-      🚀 <span data-i18n="cta_btn">Попробовать бесплатно</span>
-    </a>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-links">
-    <a href="https://t.me/MysterioVPN_bot" target="_blank" data-i18n="foot_bot" rel="noopener noreferrer">Telegram бот</a>
-    <a href="https://t.me/MysterioVPN" target="_blank" data-i18n="foot_channel" rel="noopener noreferrer">Канал</a>
-    <a href="https://t.me/Myst_support" target="_blank" data-i18n="foot_support" rel="noopener noreferrer">Поддержка</a>
-    <a href="https://keybest.cc/guide/" data-i18n="foot_guide" rel="noopener noreferrer">Инструкция</a>
-    <a href="https://teletype.in/@mystadm/X2oafHAItL9" target="_blank" data-i18n="foot_oferta" rel="noopener noreferrer">Оферта</a>
-  </div>
-  <div>© 2025 MystVPN · <span data-i18n="foot_copy">Все права защищены</span></div>
-</footer>
-
-<script>
-const translations = {
-  ru: {
-    nav_support:"Поддержка", nav_open:"Открыть бота →",
-    badge:"Серверы работают · Всё стабильно",
-    hero_title:"Интернет без границ", hero_title2:"для всех устройств",
-    hero_sub:"Защищённый туннель для свободного доступа к интернету. Telegram, Instagram, YouTube — без ограничений.",
-    hero_cta:"3 дня бесплатно", hero_cta2:"Открыть бота",
-    stat1:"Активных пользователей", stat2:"Время работы", stat3:"Скорость сервера",
-    feat_label:"Почему MystVPN", feat_title:"Всё что нужно от VPN",
-    feat_sub:"Никаких компромиссов — скорость, безопасность и простота в одном",
-    f1_title:"Молниеносная скорость", f1_sub:"WireGuard-протокол. 1 Гбит/с сервер в Европе. Стриминг без буферизации.",
-    f2_title:"Все приложения", f2_sub:"Telegram, WhatsApp, Instagram, TikTok — работает для каждого приложения без исключений.",
-    f3_title:"Полная приватность", f3_sub:"Военное шифрование. Логи не ведутся. Никто не знает что ты делаешь в сети.",
-    f4_title:"Невидим для блокировок", f4_sub:"XTLS Reality маскирует трафик под обычное обращение к сайтам. ТСПУ и Роскомнадзор не отличают от браузера.",
-    f5_title:"Все устройства", f5_sub:"Android, iPhone, Windows, Mac — один ключ работает на всём. До 10 устройств одновременно.",
-    f6_title:"Удобно через Telegram", f6_sub:"Покупка, подписка и поддержка — всё в боте. Никаких лишних приложений.",
-    how_label:"Как подключиться", how_title:"3 шага — и ты в сети",
-    s1_title:"Открой бота", s1_sub:"Перейди в @MysterioVPN_bot и выбери тариф. Оплата картой, СБП или Telegram Stars.",
-    s2_title:"Получи ключ", s2_sub:"Бот пришлёт файл конфигурации. Установи WireGuard и импортируй файл.",
-    s3_title:"Включи и готово", s3_sub:"Один тап — и весь трафик идёт через VPN. Все приложения работают.",
-    how_more:"Подробная инструкция →",
-    price_label:"Тарифы", price_title:"Честные цены",
-    price_sub:"Один ключ — все устройства. Никаких скрытых платежей.",
-    p1_period:"1 месяц", p2_period:"3 месяца", p3_period:"6 месяцев", p4_period:"1 год",
-    p2_save:"Экономия 108 ₽ (−16%)", p3_save:"Экономия 315 ₽ (−24%)", p4_save:"Экономия 829 ₽ (−32%)",
-    popular_badge:"🔥 Популярный",
-    pf1:"Все устройства", pf2:"Безлимитный трафик", pf3:"Все приложения", pf4:"Поддержка 24/7",
-    price_btn:"Купить в боте",
-    plat_label:"Устройства", plat_title:"Работает везде",
-    plat_android:"WireGuard — все приложения", plat_ios:"WireGuard из App Store",
-    plat_win:"Официальный клиент WireGuard", plat_mac:"WireGuard из Mac App Store",
-    faq_title:"Частые вопросы",
-    faq1_q:"Это законно — использовать защищённый туннель в России?",
-    faq1_a:"Да. Использование защищённых соединений физическими лицами не запрещено и не штрафуется. Ограничения касаются только провайдеров, не пользователей.",
-    faq2_q:"Почему с VPN работает медленнее?",
-    faq2_a:"MystVPN использует WireGuard — самый быстрый протокол. Скорость сервера 1 Гбит/с. Замедление обычно не ощущается.",
-    faq3_q:"Сколько устройств можно подключить?",
-    faq3_a:"До 10 устройств одновременно на одну подписку. Телефон, планшет, ноутбук, ПК — всё параллельно.",
-    faq4_q:"Telegram и WhatsApp будут работать?",
-    faq4_a:"Да. WireGuard работает на уровне ядра ОС — 100% трафика через VPN, включая Telegram и WhatsApp.",
-    faq5_q:"Как отменить подписку?",
-    faq5_a:"Через бота: Личный кабинет → Отменить подписку. Автоматического продления нет.",
-    cta_title:"Начни прямо сейчас", cta_sub:"3 дня бесплатно — без карты, без регистрации", cta_btn:"Попробовать бесплатно",
-    foot_bot:"Telegram бот", foot_channel:"Канал", foot_support:"Поддержка",
-    foot_guide:"Инструкция", foot_oferta:"Оферта", foot_copy:"Все права защищены",
-  },
-  en: {
-    nav_support:"Support", nav_open:"Open bot →",
-    badge:"Servers running · All stable",
-    hero_title:"Internet without limits", hero_title2:"for all your devices",
-    hero_sub:"Fast VPN that works in Russia. Telegram, Instagram, YouTube — unrestricted.",
-    hero_cta:"3 days free", hero_cta2:"Open bot",
-    stat1:"Active users", stat2:"Uptime", stat3:"Server speed",
-    feat_label:"Why MystVPN", feat_title:"Everything you need from a VPN",
-    feat_sub:"No compromises — speed, security and simplicity in one",
-    f1_title:"Lightning speed", f1_sub:"WireGuard protocol. 1 Gbps server in Europe. Streaming without buffering.",
-    f2_title:"All apps", f2_sub:"Telegram, WhatsApp, Instagram, TikTok — works for every app without exceptions.",
-    f3_title:"Full privacy", f3_sub:"Military-grade encryption. No logs. Nobody knows what you do online.",
-    f4_title:"Bypasses blocks", f4_sub:"XTLS Reality disguises traffic as regular HTTPS. Undetectable by censorship systems.",
-    f5_title:"All devices", f5_sub:"Android, iPhone, Windows, Mac — one key works on everything. Up to 10 devices at once.",
-    f6_title:"Easy via Telegram", f6_sub:"Purchase, subscription and support — all in the bot. No extra apps needed.",
-    how_label:"How to connect", how_title:"3 steps to get started",
-    s1_title:"Open the bot", s1_sub:"Go to @MysterioVPN_bot and choose a plan. Pay by card, SBP or Telegram Stars.",
-    s2_title:"Get your key", s2_sub:"The bot sends a config file. Install WireGuard and import the file.",
-    s3_title:"Turn on and done", s3_sub:"One tap — all traffic goes through VPN. Every app works.",
-    how_more:"Full setup guide →",
-    price_label:"Pricing", price_title:"Fair prices",
-    price_sub:"One key — all devices. No hidden fees.",
-    p1_period:"1 month", p2_period:"3 months", p3_period:"6 months", p4_period:"1 year",
-    p2_save:"Save 108 ₽ (−16%)", p3_save:"Save 315 ₽ (−24%)", p4_save:"Save 829 ₽ (−32%)",
-    popular_badge:"🔥 Most popular",
-    pf1:"All devices", pf2:"Unlimited traffic", pf3:"All apps", pf4:"24/7 support",
-    price_btn:"Buy in bot",
-    plat_label:"Devices", plat_title:"Works everywhere",
-    plat_android:"WireGuard — all apps", plat_ios:"WireGuard from App Store",
-    plat_win:"Official WireGuard client", plat_mac:"WireGuard from Mac App Store",
-    faq_title:"Frequently asked questions",
-    faq1_q:"Is it legal to use a VPN in Russia?",
-    faq1_a:"Yes. Using VPN by individuals is not prohibited or penalized. Restrictions apply to providers, not users.",
-    faq2_q:"Why is it slower with a VPN?",
-    faq2_a:"MystVPN uses WireGuard — the fastest protocol. Server speed is 1 Gbps. Slowdown is usually imperceptible.",
-    faq3_q:"How many devices can I connect?",
-    faq3_a:"Up to 10 devices simultaneously on one subscription. Phone, tablet, laptop, PC — all at once.",
-    faq4_q:"Will Telegram and WhatsApp work?",
-    faq4_a:"Yes. WireGuard operates at the OS kernel level — 100% of traffic goes through VPN, including Telegram and WhatsApp.",
-    faq5_q:"How to cancel subscription?",
-    faq5_a:"Via the bot: Personal Cabinet → Cancel subscription. No automatic renewal without your consent.",
-    cta_title:"Start right now", cta_sub:"3 days free — no card, no registration", cta_btn:"Try for free",
-    foot_bot:"Telegram bot", foot_channel:"Channel", foot_support:"Support",
-    foot_guide:"Setup guide", foot_oferta:"Terms", foot_copy:"All rights reserved",
-  }
-};
-
-let currentLang = 'ru';
-
-function applyLang(lang) {
-  const t = translations[lang];
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (t[key]) el.textContent = t[key];
-  });
-  const langBtn = document.getElementById('langBtn');
-  if(langBtn) langBtn.textContent = lang === 'ru' ? '🌐 EN' : '🌐 RU';
-  document.documentElement.lang = lang;
-  document.documentElement.setAttribute('lang', lang);
-}
-
-function toggleLang() {
-  currentLang = currentLang === 'ru' ? 'en' : 'ru';
-  applyLang(currentLang);
-}
-
-function toggleFaq(item) {
-  if (!item) return;
-  item.classList.toggle('open');
-  const button = item.querySelector('.faq-question');
-  if (button) {
-    button.setAttribute('aria-expanded', item.classList.contains('open'));
-  }
-}
-
-// Инициализация перевода и биндинг кнопки
-document.addEventListener('DOMContentLoaded', () => {
-  applyLang('ru');
-  const langBtn = document.getElementById('langBtn');
-  if (langBtn) langBtn.addEventListener('click', toggleLang);
-});
-</script>
+    const select = document.getElementById("langSelect");
+    const saved = localStorage.getItem("mystvpn_lang") || "ru";
+    select.value = data[saved] ? saved : "ru";
+    setLang(select.value);
+    select.addEventListener("change", event => setLang(event.target.value));
+  </script>
 </body>
 </html>
