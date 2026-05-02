@@ -36,6 +36,76 @@ async def _send_expiry_notifications(bot) -> None:
             logger.warning(f"Notification error for sub {sub.id}: {e}")
 
 
+async def _sync_active_key_expirations() -> None:
+    """Проставляет expiryTime в 3x-ui для уже выданных активных ключей."""
+    from services.xray_service import XrayService
+
+    now = datetime.utcnow()
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Subscription).where(
+                Subscription.status == "active",
+                Subscription.end_date > now,
+                Subscription.vpn_key.isnot(None),
+            )
+        )
+        subs = result.scalars().all()
+
+    synced = 0
+    failed = 0
+    for sub in subs:
+        try:
+            if await XrayService.sync_client_expiry(sub.user_id, sub.vpn_key, sub.end_date):
+                synced += 1
+            else:
+                failed += 1
+        except Exception as e:
+            failed += 1
+            logger.warning(f"Expiry sync error for sub {sub.id}: {e}")
+
+    if synced or failed:
+        logger.info(f"Expiry sync finished: synced={synced}, failed={failed}")
+
+
+async def _expire_subscriptions_and_remove_keys() -> None:
+    """Отключает просроченные подписки и удаляет их ключи из 3x-ui."""
+    from services.xray_service import XrayService
+
+    now = datetime.utcnow()
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Subscription).where(
+                Subscription.status == "active",
+                Subscription.end_date <= now,
+            )
+        )
+        subs = result.scalars().all()
+
+    for sub in subs:
+        try:
+            old_uuid = XrayService._extract_uuid(sub.vpn_key) if sub.vpn_key else None
+            new_uuid = XrayService._extract_uuid(sub.new_vpn_key) if sub.new_vpn_key else None
+
+            if old_uuid:
+                await XrayService.remove_client(sub.user_id, old_uuid)
+            if new_uuid and new_uuid != old_uuid:
+                await XrayService.remove_client(sub.user_id, new_uuid)
+
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(Subscription).where(Subscription.id == sub.id))
+                sub_db = result.scalar_one_or_none()
+                if sub_db and sub_db.status == "active" and sub_db.end_date <= datetime.utcnow():
+                    sub_db.status = "expired"
+                    sub_db.new_vpn_key = None
+                    sub_db.new_sub_url = None
+                    sub_db.key_rotation_deadline = None
+                    await session.commit()
+
+            logger.info(f"Expired subscription removed from 3x-ui: sub={sub.id} user={sub.user_id}")
+        except Exception as e:
+            logger.warning(f"Expire cleanup error for sub {sub.id}: {e}")
+
+
 async def _notify_if_needed(bot, sub: Subscription, days_left: int) -> None:
     """Отправить уведомление если нужно и ещё не отправляли."""
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -257,6 +327,16 @@ async def run_notification_loop(bot) -> None:
     daily_stats_counter = 0
 
     while True:
+        try:
+            await _expire_subscriptions_and_remove_keys()
+        except Exception as e:
+            logger.error(f"Expired subscriptions cleanup error: {e}")
+
+        try:
+            await _sync_active_key_expirations()
+        except Exception as e:
+            logger.error(f"Expiry sync loop error: {e}")
+
         try:
             await _send_expiry_notifications(bot)
         except Exception as e:

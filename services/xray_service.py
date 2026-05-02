@@ -107,6 +107,64 @@ class XrayService:
 
         return None
 
+    @staticmethod
+    def _client_expiry_ms(end_date: datetime) -> int:
+        return int(end_date.timestamp() * 1000)
+
+    @staticmethod
+    def _find_client(inbound: dict, client_uuid: str) -> dict | None:
+        try:
+            settings = json.loads(inbound.get("settings", "{}"))
+            for client in settings.get("clients", []):
+                if client.get("id") == client_uuid:
+                    return client
+        except Exception as e:
+            logger.warning(f"XRay client parse error: {e}")
+        return None
+
+    @classmethod
+    async def _update_client_expiry_on_inbound(
+        cls,
+        session: aiohttp.ClientSession,
+        inbound_id: int,
+        client_uuid: str,
+        user_id: int,
+        end_date: datetime,
+    ) -> bool:
+        inbound = await cls._get_inbound(session, inbound_id)
+        if not inbound:
+            return False
+
+        client = cls._find_client(inbound, client_uuid)
+        if not client:
+            return False
+
+        client["expiryTime"] = cls._client_expiry_ms(end_date)
+        client["enable"] = end_date > datetime.utcnow()
+        client.setdefault("tgId", str(user_id))
+        client.setdefault("limitIp", 0)
+        client.setdefault("totalGB", 0)
+        client.setdefault("reset", 0)
+
+        payload = {
+            "id": int(inbound_id),
+            "settings": json.dumps({"clients": [client]}),
+        }
+        urls = [
+            f"{cls._base_url()}/panel/api/inbounds/updateClient/{client_uuid}",
+            f"{cls._base_url()}/xui/API/inbounds/updateClient/{client_uuid}",
+        ]
+        for url in urls:
+            try:
+                resp = await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=15))
+                data = await resp.json(content_type=None)
+                if data.get("success"):
+                    return True
+                logger.warning(f"XRay updateClient failed via {url}: {data.get('msg', data)}")
+            except Exception as e:
+                logger.warning(f"XRay updateClient {url} failed: {e}")
+        return False
+
     @classmethod
     async def test_connection(cls) -> str:
         from config import config
@@ -258,6 +316,31 @@ class XrayService:
         return None, None
 
     @classmethod
+    async def sync_client_expiry(cls, user_id: int, vpn_key: str | None, end_date: datetime) -> bool:
+        """Обновляет срок существующего клиента в 3x-ui без перевыдачи ключа."""
+        from config import config
+
+        client_uuid = cls._extract_uuid(vpn_key or "")
+        if not client_uuid:
+            return False
+        if not (config.xray_address or config.xray_host) or not config.xray_password:
+            return False
+
+        async with cls._session() as session:
+            if not await cls._login(session):
+                return False
+
+            ok = await cls._update_client_expiry_on_inbound(
+                session, cls.get_inbound_id(), client_uuid, user_id, end_date
+            )
+            if config.xray_xhttp_inbound_id:
+                xhttp_ok = await cls._update_client_expiry_on_inbound(
+                    session, int(config.xray_xhttp_inbound_id), client_uuid, user_id, end_date
+                )
+                ok = ok or xhttp_ok
+            return ok
+
+    @classmethod
     def _build_key(cls, inbound: dict, client_uuid: str, user_id: int) -> str | None:
         from config import config
         protocol = inbound.get("protocol", "")
@@ -343,16 +426,24 @@ class XrayService:
             if not client_uuid:
                 logger.warning(f"XRay: no UUID for user {user_id}, cannot delete")
                 return False
-            try:
-                resp = await session.post(
-                    f"{cls._base_url()}/panel/api/inbounds/{cls.get_inbound_id()}/delClient/{client_uuid}",
-                    timeout=aiohttp.ClientTimeout(total=10),
-                )
-                data = await resp.json(content_type=None)
-                return data.get("success", False)
-            except Exception as e:
-                logger.error(f"XRay removeClient error: {e}")
-                return False
+            removed = False
+            inbound_ids = [cls.get_inbound_id()]
+            if config.xray_xhttp_inbound_id:
+                inbound_ids.append(int(config.xray_xhttp_inbound_id))
+            for inbound_id in inbound_ids:
+                for url in [
+                    f"{cls._base_url()}/panel/api/inbounds/{inbound_id}/delClient/{client_uuid}",
+                    f"{cls._base_url()}/xui/API/inbounds/{inbound_id}/delClient/{client_uuid}",
+                ]:
+                    try:
+                        resp = await session.post(url, timeout=aiohttp.ClientTimeout(total=10))
+                        data = await resp.json(content_type=None)
+                        removed = removed or data.get("success", False)
+                        if data.get("success"):
+                            break
+                    except Exception as e:
+                        logger.warning(f"XRay removeClient {url} error: {e}")
+            return removed
 
     @classmethod
     async def reset_client(cls, user_id: int, days: int, old_key: str | None = None) -> tuple[str | None, str | None]:

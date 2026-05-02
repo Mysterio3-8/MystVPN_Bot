@@ -42,12 +42,27 @@ def is_admin(user_id: int) -> bool:
     return user_id in config.admin_ids
 
 
+async def _admin_panel_text() -> str:
+    async with AsyncSessionLocal() as session:
+        total_users = await UserService.count(session)
+        active_subs = await SubscriptionService.count_active(session)
+        revenue = await PaymentService.total_revenue(session)
+
+    return (
+        "🔧 <b>Админ панель MystVPN</b>\n\n"
+        f"👥 Пользователей: <b>{total_users}</b>\n"
+        f"✅ Активных подписок: <b>{active_subs}</b>\n"
+        f"💰 Выручка RUB: <b>{revenue:.2f} ₽</b>\n\n"
+        "Выберите действие:"
+    )
+
+
 @router.message(Command("admin"))
 async def cmd_admin(message: Message) -> None:
     if not is_admin(message.from_user.id):
         await message.answer("❌ У вас нет доступа к админ панели.")
         return
-    await message.answer("🔧 <b>Админ панель MystVPN</b>\n\nВыберите действие:", reply_markup=admin_inline_keyboard(), parse_mode="HTML")
+    await message.answer(await _admin_panel_text(), reply_markup=admin_inline_keyboard(), parse_mode="HTML")
 
 
 @router.message(Command("test_xray"))
@@ -74,7 +89,7 @@ async def admin_panel(callback: CallbackQuery) -> None:
         await callback.answer("❌ Нет доступа", show_alert=True)
         return
     await callback.message.edit_text(
-        "🔧 <b>Админ панель MystVPN</b>\n\nВыберите действие:",
+        await _admin_panel_text(),
         reply_markup=admin_inline_keyboard(),
         parse_mode="HTML",
     )

@@ -2,7 +2,18 @@ from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, GiftService, XrayService, ReferralService, PromoService, fmt_key, i18n
+from services import (
+    UserService,
+    SubscriptionService,
+    GiftService,
+    XrayService,
+    ReferralService,
+    PromoService,
+    fmt_key,
+    i18n,
+    schedule_trial_sequence,
+    send_referral_offer,
+)
 from keyboards import main_menu_keyboard, about_keyboard, back_keyboard
 from config import PLANS, TRIAL_DAYS
 
@@ -162,6 +173,7 @@ async def trial_activate(callback: CallbackQuery) -> None:
         vpn_key, sub_url = await XrayService.create_client(user_id, TRIAL_DAYS)
         if vpn_key:
             await SubscriptionService.save_key(session, sub.id, vpn_key, sub_url)
+        trial_end = sub.end_date
 
     renew_keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Купить подписку", callback_data="menu_buy")],
@@ -175,6 +187,11 @@ async def trial_activate(callback: CallbackQuery) -> None:
         reply_markup=renew_keyboard,
         parse_mode="HTML",
     )
+    await schedule_trial_sequence(user_id, trial_end)
+    try:
+        await send_referral_offer(callback.bot, user_id)
+    except Exception:
+        pass
     await callback.answer()
 
 

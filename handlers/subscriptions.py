@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 from database import AsyncSessionLocal
-from services import UserService, SubscriptionService, PromoService, XrayService, i18n
+from services import UserService, SubscriptionService, PromoService, XrayService, i18n, schedule_abandoned_checkout
 from config import config as bot_config
 from keyboards import tariffs_keyboard, payment_method_keyboard, back_keyboard
 from config import PLANS
@@ -76,6 +76,7 @@ async def choose_plan(callback: CallbackQuery) -> None:
         reply_markup=payment_method_keyboard(plan_key, lang, is_admin=is_admin),
         parse_mode="HTML",
     )
+    await schedule_abandoned_checkout(callback.from_user.id, plan_key)
     await callback.answer()
 
 

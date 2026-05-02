@@ -193,18 +193,10 @@ def back_keyboard(callback: str = "back_to_menu", lang: str = "ru") -> InlineKey
 
 def admin_inline_keyboard() -> InlineKeyboardMarkup:
     buttons = [
-        [
-            InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats"),
-            InlineKeyboardButton(text="👥 Пользователи", callback_data="admin_users"),
-        ],
-        [
-            InlineKeyboardButton(text="💰 Платежи", callback_data="admin_payments"),
-            InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast"),
-        ],
+        [InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_grant")],
         [InlineKeyboardButton(text="🎟️ Промокоды", callback_data="admin_promos")],
         [InlineKeyboardButton(text="🔌 Тест XRay/3x-ui", callback_data="admin_test_xray")],
-        [InlineKeyboardButton(text="🔄 Ротация ключей (grace 24ч)", callback_data="admin_rotate_keys")],
         [InlineKeyboardButton(text="◀️ Закрыть", callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
