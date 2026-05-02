@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  traffic-bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./bot_data.db:/app/bot_data.db
+      - ./welcome_photo.jpg:/app/welcome_photo.jpg:ro
+    # No need to expose ports as the bot uses polling
+    # If you want to expose for debugging, uncomment below:
+    # ports:
+    #   - "8080:8080"
