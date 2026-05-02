@@ -39,43 +39,41 @@ class ReferralService:
         """
         Обработать реферал: записать кто привёл, добавить дни реферреру.
         Вызывается один раз при регистрации нового пользователя.
+        Одна атомарная транзакция с row lock для избежания race condition.
         """
         if new_user_id == referrer_id:
-            return  # нельзя пригласить самого себя
+            return
 
-        # Помечаем нового пользователя
-        new_user = await session.execute(select(User).where(User.user_id == new_user_id))
+        new_user = await session.execute(select(User).where(User.user_id == new_user_id).with_for_update())
         new_user = new_user.scalar_one_or_none()
         if not new_user or new_user.referred_by is not None:
-            return  # уже обработан
+            return
 
         new_user.referred_by = referrer_id
-        await session.commit()
 
-        # Начисляем дни реферреру
-        referrer = await session.execute(select(User).where(User.user_id == referrer_id))
+        referrer = await session.execute(select(User).where(User.user_id == referrer_id).with_for_update())
         referrer = referrer.scalar_one_or_none()
         if not referrer:
+            await session.rollback()
             return
 
         referrer.extra_days = (referrer.extra_days or 0) + REFERRAL_BONUS_DAYS
-        await session.commit()
 
-        # Считаем общее количество рефералов реферрера
         count_result = await session.execute(
             select(func.count()).where(User.referred_by == referrer_id)
         )
         total_refs = count_result.scalar() or 0
 
-        # Проверяем milestone
-        milestone_hit = (total_refs % REFERRAL_MILESTONE == 0) and total_refs > 0
+        milestone_hit = total_refs > 0 and REFERRAL_MILESTONE > 1 and total_refs % REFERRAL_MILESTONE == 0
 
-        # Уведомляем реферрера
+        if milestone_hit:
+            referrer.extra_days += REFERRAL_MILESTONE_DAYS
+
+        await session.commit()
+
         if bot:
             try:
                 if milestone_hit:
-                    referrer.extra_days += REFERRAL_MILESTONE_DAYS
-                    await session.commit()
                     msg = (
                         f"🎉 <b>Milestone {total_refs} рефералов!</b>\n\n"
                         f"🎁 +{REFERRAL_BONUS_DAYS} дней — обычный бонус\n"
@@ -106,7 +104,7 @@ class ReferralService:
         from datetime import timedelta
         from models import Subscription
 
-        user = await session.execute(select(User).where(User.user_id == user_id))
+        user = await session.execute(select(User).where(User.user_id == user_id).with_for_update())
         user = user.scalar_one_or_none()
         if not user or not user.extra_days:
             return 0
@@ -115,6 +113,7 @@ class ReferralService:
             select(Subscription)
             .where(Subscription.user_id == user_id, Subscription.status == "active")
             .order_by(Subscription.end_date.desc())
+            .with_for_update()
         )
         sub = sub.scalar_one_or_none()
         if not sub:
