@@ -141,8 +141,8 @@ async def cmd_start(message: Message) -> None:
             await message.answer("❌ Вы заблокированы.")
             return
 
-        # Обрабатываем реферал для нового пользователя
-        if is_new and referrer_id and referrer_id != message.from_user.id:
+        # Обрабатываем реферал для нового или существующего пользователя без referred_by
+        if referrer_id and referrer_id != message.from_user.id and user.referred_by is None:
             await ReferralService.process_referral(
                 session, message.from_user.id, referrer_id,
                 bot=message.bot,
