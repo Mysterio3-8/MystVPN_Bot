@@ -130,7 +130,7 @@ async def admin_broadcast_start(callback: CallbackQuery, state: FSMContext) -> N
     await callback.answer()
 
 
-@router.message(BroadcastState.waiting_message)
+@router.message(BroadcastState.waiting_message, ~Command())
 async def admin_broadcast_send(message: Message, state: FSMContext) -> None:
     if not is_admin(message.from_user.id):
         return
@@ -305,7 +305,7 @@ async def admin_grant_start(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-@router.message(GrantState.waiting_user_id)
+@router.message(GrantState.waiting_user_id, ~Command())
 async def admin_grant_user(message: Message, state: FSMContext) -> None:
     if not message.text or not message.text.isdigit():
         await message.answer("❌ Введите числовой user_id")
@@ -317,7 +317,7 @@ async def admin_grant_user(message: Message, state: FSMContext) -> None:
     await state.set_state(GrantState.waiting_plan)
 
 
-@router.message(GrantState.waiting_plan)
+@router.message(GrantState.waiting_plan, ~Command())
 async def admin_grant_plan(message: Message, state: FSMContext) -> None:
     from config import PLANS
     plan_key = message.text.strip() if message.text else ""
@@ -558,7 +558,7 @@ async def admin_promo_create_start(callback: CallbackQuery, state: FSMContext) -
     await callback.answer()
 
 
-@router.message(PromoCreateState.waiting_code)
+@router.message(PromoCreateState.waiting_code, ~Command())
 async def admin_promo_create_code(message: Message, state: FSMContext) -> None:
     code = (message.text or "").strip().upper()
     if not code or len(code) < 3:
@@ -584,7 +584,7 @@ async def admin_promo_type_discount(callback: CallbackQuery, state: FSMContext) 
     await callback.answer()
 
 
-@router.message(PromoCreateState.waiting_discount)
+@router.message(PromoCreateState.waiting_discount, ~Command())
 async def admin_promo_discount_value(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip()
     if not text.isdigit() or not (1 <= int(text) <= 100):
@@ -621,7 +621,7 @@ async def admin_promo_plan_pick(callback: CallbackQuery, state: FSMContext) -> N
     await callback.answer()
 
 
-@router.message(PromoCreateState.waiting_max_uses)
+@router.message(PromoCreateState.waiting_max_uses, ~Command())
 async def admin_promo_max_uses(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip()
     if not text.isdigit():
@@ -632,7 +632,7 @@ async def admin_promo_max_uses(message: Message, state: FSMContext) -> None:
     await message.answer("Введите срок действия в днях (0 = бессрочно):")
 
 
-@router.message(PromoCreateState.waiting_days_valid)
+@router.message(PromoCreateState.waiting_days_valid, ~Command())
 async def admin_promo_days(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip()
     if not text.isdigit():
