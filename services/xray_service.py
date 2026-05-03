@@ -446,6 +446,55 @@ class XrayService:
             return removed
 
     @classmethod
+    async def disable_client(cls, user_id: int, vpn_key: str) -> bool:
+        """
+        Дисейблит клиента в 3x-ui (enable=False, expiryTime=1ms).
+        Используется при grace period — ключ отключён, но ещё не удалён.
+        """
+        from config import config
+        client_uuid = cls._extract_uuid(vpn_key or "")
+        if not client_uuid:
+            return False
+        if not (config.xray_address or config.xray_host) or not config.xray_password:
+            return False
+
+        async with cls._session() as session:
+            if not await cls._login(session):
+                return False
+
+            inbound = await cls._get_inbound(session, cls.get_inbound_id())
+            if not inbound:
+                return False
+            client = cls._find_client(inbound, client_uuid)
+            if not client:
+                return False
+
+            client["enable"] = False
+            client["expiryTime"] = 1  # 1ms — гарантированно в прошлом
+            client.setdefault("tgId", str(user_id))
+            client.setdefault("limitIp", 0)
+            client.setdefault("totalGB", 0)
+            client.setdefault("reset", 0)
+
+            payload = {
+                "id": int(cls.get_inbound_id()),
+                "settings": json.dumps({"clients": [client]}),
+            }
+            for url in [
+                f"{cls._base_url()}/panel/api/inbounds/updateClient/{client_uuid}",
+                f"{cls._base_url()}/xui/API/inbounds/updateClient/{client_uuid}",
+            ]:
+                try:
+                    resp = await session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=15))
+                    data = await resp.json(content_type=None)
+                    if data.get("success"):
+                        logger.info(f"XRay: disabled client {client_uuid} for user {user_id}")
+                        return True
+                except Exception as e:
+                    logger.warning(f"XRay disable_client {url}: {e}")
+        return False
+
+    @classmethod
     async def reset_client(cls, user_id: int, days: int, old_key: str | None = None) -> tuple[str | None, str | None]:
         """Удаляет старый ключ и создаёт новый. Возвращает (vpn_key, sub_url)."""
         client_uuid = cls._extract_uuid(old_key) if old_key else None

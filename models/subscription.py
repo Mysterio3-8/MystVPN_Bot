@@ -33,6 +33,9 @@ class Subscription(Base):
     key_rotation_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # ── WireGuard ─────────────────────────────────────────────────────────────
     wg_peer_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # ── Lifecycle ключа ───────────────────────────────────────────────────────
+    # Время когда ключ был отключён в 3x-ui после истечения (grace period 24ч)
+    key_disabled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
     payments: Mapped[list["Payment"]] = relationship(back_populates="subscription")

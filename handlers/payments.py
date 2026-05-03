@@ -213,7 +213,27 @@ async def check_yookassa_payment(callback: CallbackQuery) -> None:
 
         days = PLANS.get(plan_key or "", {}).get("days", 30)
         user_id = callback.from_user.id
-        vpn_key, sub_url = await XrayService.create_client(user_id, days)
+        vpn_key = None
+        sub_url = None
+
+        # Переиспользуем UUID если есть — юзер не замечает смены
+        from models import Subscription as _Sub
+        from sqlalchemy import select as _sel
+        async with AsyncSessionLocal() as session:
+            old_key, old_sub_url = await SubscriptionService.get_latest_vpn_key(session, user_id)
+            sub_obj = await session.execute(_sel(_Sub).where(_Sub.id == sub_id))
+            sub_obj = sub_obj.scalar_one_or_none()
+            end_date = sub_obj.end_date if sub_obj else None
+
+        if old_key and end_date:
+            synced = await XrayService.sync_client_expiry(user_id, old_key, end_date)
+            if synced:
+                vpn_key = old_key
+                sub_url = old_sub_url
+
+        if not vpn_key:
+            vpn_key, sub_url = await XrayService.create_client(user_id, days)
+
         if vpn_key:
             async with AsyncSessionLocal() as session:
                 await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)

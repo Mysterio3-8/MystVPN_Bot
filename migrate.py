@@ -77,6 +77,11 @@ MIGRATIONS = [
         "gift_codes.payment_ext_id",
         "ALTER TABLE gift_codes ADD COLUMN IF NOT EXISTS payment_ext_id VARCHAR(128) DEFAULT NULL",
     ),
+    # ── Key lifecycle ───────────────────────────────────────────────────────
+    (
+        "subscriptions.key_disabled_at",
+        "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS key_disabled_at TIMESTAMP DEFAULT NULL",
+    ),
 ]
 
 

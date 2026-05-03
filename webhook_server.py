@@ -136,9 +136,30 @@ async def handle_yookassa(request: web.Request) -> web.Response:
         logger.info(f"Webhook: gift payment {ext_id} confirmed for user {user_id}")
         return web.Response(status=200)
 
-    # Обычная подписка — создаём ключ
+    # Обычная подписка — переиспользуем UUID если есть старый ключ (юзер не замечает смены)
     days = PLANS.get(plan_key or "", {}).get("days", 30)
-    vpn_key, sub_url = await XrayService.create_client(user_id, days)
+    vpn_key = None
+    sub_url = None
+
+    async with AsyncSessionLocal() as session:
+        old_key, old_sub_url = await SubscriptionService.get_latest_vpn_key(session, user_id)
+        # Получаем end_date новой подписки
+        from models import Subscription as _Sub
+        from sqlalchemy import select as _sel
+        sub_obj = await session.execute(_sel(_Sub).where(_Sub.id == sub_id)) if sub_id else None
+        sub_obj = sub_obj.scalar_one_or_none() if sub_obj else None
+        end_date = sub_obj.end_date if sub_obj else None
+
+    if old_key and end_date:
+        synced = await XrayService.sync_client_expiry(user_id, old_key, end_date)
+        if synced:
+            vpn_key = old_key
+            sub_url = old_sub_url
+            logger.info(f"Webhook: reused existing key for user {user_id}, extended to {end_date}")
+
+    if not vpn_key:
+        vpn_key, sub_url = await XrayService.create_client(user_id, days)
+
     if vpn_key and sub_id:
         async with AsyncSessionLocal() as session:
             await SubscriptionService.save_key(session, sub_id, vpn_key, sub_url)

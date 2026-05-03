@@ -20,7 +20,7 @@ from handlers import (
     donate_router,
     referral_router,
 )
-from services import run_marketing_loop, run_notification_loop
+from services import run_marketing_loop, run_notification_loop, run_expiry_watchdog
 from services.notification_service import run_inbound_watchdog
 from webhook_server import create_webhook_app
 
@@ -121,6 +121,7 @@ async def main() -> None:
             run_notification_loop(bot),
             run_marketing_loop(bot),
             run_inbound_watchdog(bot),
+            run_expiry_watchdog(bot),
         )
     except (KeyboardInterrupt, SystemExit, asyncio.CancelledError):
         logger.info("🛑 Остановка по сигналу пользователя")

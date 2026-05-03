@@ -127,6 +127,24 @@ class SubscriptionService:
             await session.commit()
 
     @staticmethod
+    async def get_latest_vpn_key(session: AsyncSession, user_id: int) -> tuple[str | None, str | None]:
+        """
+        Возвращает (vpn_key, sub_url) последней подписки юзера у которой есть ключ.
+        Используется для переиспользования UUID при продлении — юзер не замечает смены.
+        Ищет по любому статусу (active, expired, cancelled).
+        """
+        result = await session.execute(
+            select(Subscription)
+            .where(Subscription.user_id == user_id, Subscription.vpn_key != None)
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        sub = result.scalars().first()
+        if sub:
+            return sub.vpn_key, sub.sub_url
+        return None, None
+
+    @staticmethod
     async def count_active(session: AsyncSession) -> int:
         result = await session.execute(
             select(Subscription).where(Subscription.status == "active")
