@@ -317,7 +317,10 @@ class XrayService:
 
     @classmethod
     async def sync_client_expiry(cls, user_id: int, vpn_key: str | None, end_date: datetime) -> bool:
-        """Обновляет срок существующего клиента в 3x-ui без перевыдачи ключа."""
+        """Обновляет срок существующего клиента в 3x-ui без перевыдачи ключа.
+        Если клиент отсутствует в основном inbound — пытается добавить его заново.
+        Возвращает True только если основной inbound успешно обновлён/восстановлен.
+        """
         from config import config
 
         client_uuid = cls._extract_uuid(vpn_key or "")
@@ -326,19 +329,59 @@ class XrayService:
         if not (config.xray_address or config.xray_host) or not config.xray_password:
             return False
 
+        expiry_ms = cls._client_expiry_ms(end_date)
+
         async with cls._session() as session:
             if not await cls._login(session):
                 return False
 
-            ok = await cls._update_client_expiry_on_inbound(
+            # Обновляем основной inbound (VLESS Reality)
+            ok_main = await cls._update_client_expiry_on_inbound(
                 session, cls.get_inbound_id(), client_uuid, user_id, end_date
             )
-            if config.xray_xhttp_inbound_id:
-                xhttp_ok = await cls._update_client_expiry_on_inbound(
-                    session, int(config.xray_xhttp_inbound_id), client_uuid, user_id, end_date
+
+            # Если клиента нет в основном inbound — добавляем заново с тем же UUID
+            if not ok_main:
+                logger.warning(
+                    f"XRay: UUID {client_uuid} не найден в inbound {cls.get_inbound_id()} "
+                    f"для user {user_id} — пытаемся re-add"
                 )
-                ok = ok or xhttp_ok
-            return ok
+                try:
+                    add_url = f"{cls._base_url()}/panel/api/inbounds/addClient"
+                    payload = {
+                        "id": int(cls.get_inbound_id()),
+                        "settings": json.dumps({"clients": [{
+                            "id": client_uuid,
+                            "email": "",
+                            "flow": "xtls-rprx-vision",
+                            "limitIp": 0, "totalGB": 0,
+                            "expiryTime": expiry_ms,
+                            "enable": True,
+                            "tgId": str(user_id),
+                            "comment": f"MystVPN user {user_id} (re-add)",
+                            "reset": 0,
+                        }]}),
+                    }
+                    resp = await session.post(add_url, json=payload, timeout=aiohttp.ClientTimeout(total=15))
+                    data = await resp.json(content_type=None)
+                    ok_main = data.get("success", False)
+                    if ok_main:
+                        logger.info(f"XRay: re-added UUID {client_uuid} to inbound {cls.get_inbound_id()} for user {user_id}")
+                    else:
+                        logger.error(f"XRay: re-add failed for user {user_id}: {data.get('msg', data)}")
+                except Exception as e:
+                    logger.error(f"XRay: re-add exception for user {user_id}: {e}")
+
+            # XHTTP — некритично, обновляем best-effort
+            if config.xray_xhttp_inbound_id:
+                try:
+                    await cls._update_client_expiry_on_inbound(
+                        session, int(config.xray_xhttp_inbound_id), client_uuid, user_id, end_date
+                    )
+                except Exception as e:
+                    logger.warning(f"XRay: XHTTP sync failed (non-critical) for user {user_id}: {e}")
+
+            return ok_main
 
     @classmethod
     def _build_key(cls, inbound: dict, client_uuid: str, user_id: int) -> str | None:
