@@ -24,5 +24,9 @@ class User(Base):
     # ── Пробный период ────────────────────────────────────────────────────────
     trial_used: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # ── Партнёрская программа ─────────────────────────────────────────────────
+    is_partner: Mapped[bool] = mapped_column(Boolean, default=False)
+    partner_channel: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     payments: Mapped[list["Payment"]] = relationship(back_populates="user", cascade="all, delete-orphan")

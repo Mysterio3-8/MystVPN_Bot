@@ -82,6 +82,15 @@ MIGRATIONS = [
         "subscriptions.key_disabled_at",
         "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS key_disabled_at TIMESTAMP DEFAULT NULL",
     ),
+    # ── Партнёрская программа ───────────────────────────────────────────────
+    (
+        "users.is_partner",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
+    (
+        "users.partner_channel",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS partner_channel VARCHAR(100) DEFAULT NULL",
+    ),
 ]
 
 

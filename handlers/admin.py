@@ -149,6 +149,93 @@ async def admin_broadcast_send(message: Message, state: FSMContext) -> None:
     await message.answer(f"📢 Рассылка завершена.\n✅ Отправлено: {sent}\n❌ Ошибок: {failed}")
 
 
+@router.message(Command("new_partner"))
+async def cmd_new_partner(message: Message) -> None:
+    """
+    /new_partner user_id @channel_name
+    Регистрирует партнёра. Пример: /new_partner 123456789 @MyCryptoChannel
+    """
+    if not is_admin(message.from_user.id):
+        return
+
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Использование: /new_partner <user_id> <@channel>\nПример: /new_partner 123456789 @MyCryptoChannel")
+        return
+
+    try:
+        partner_user_id = int(parts[1])
+    except ValueError:
+        await message.answer("❌ user_id должен быть числом")
+        return
+
+    channel = parts[2]
+
+    from sqlalchemy import select as _sel
+    from models import User as _User
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(_sel(_User).where(_User.user_id == partner_user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            await message.answer(f"❌ Пользователь {partner_user_id} не найден в БД.\nОн должен сначала написать /start боту.")
+            return
+        user.is_partner = True
+        user.partner_channel = channel
+        await session.commit()
+
+    from services import ReferralService
+    ref_link = ReferralService.get_ref_link(partner_user_id)
+    await message.answer(
+        f"✅ <b>Партнёр создан!</b>\n\n"
+        f"ID: <code>{partner_user_id}</code>\n"
+        f"Канал: <b>{channel}</b>\n"
+        f"Реф-ссылка: <code>{ref_link}</code>\n\n"
+        f"Партнёр может проверить статистику командой /partner в боте.",
+        parse_mode="HTML",
+    )
+
+    # Уведомляем партнёра
+    try:
+        await message.bot.send_message(
+            partner_user_id,
+            f"🎉 <b>Добро пожаловать в партнёрскую программу MystVPN!</b>\n\n"
+            f"Ваша реф-ссылка для размещения в канале {channel}:\n"
+            f"<code>{ref_link}</code>\n\n"
+            f"Вы получаете <b>30% от всех платежей</b> приведённых пользователей — пожизненно.\n\n"
+            f"Статистика: /partner\n"
+            f"Вопросы: @Myst_support",
+            parse_mode="HTML",
+        )
+    except Exception:
+        await message.answer("⚠️ Не удалось уведомить партнёра (возможно, заблокировал бота).")
+
+
+@router.message(Command("partners"))
+async def cmd_partners_list(message: Message) -> None:
+    """Список всех партнёров с краткой статистикой."""
+    if not is_admin(message.from_user.id):
+        return
+
+    from services.partner_service import PartnerService
+    async with AsyncSessionLocal() as session:
+        partners = await PartnerService.get_all_partners(session)
+        if not partners:
+            await message.answer("Партнёров пока нет. Добавь: /new_partner user_id @channel")
+            return
+
+        lines = ["👥 <b>Партнёры MystVPN:</b>\n"]
+        for p in partners:
+            stats = await PartnerService.get_stats(session, p.user_id)
+            lines.append(
+                f"• {p.partner_channel or '—'} (id: <code>{p.user_id}</code>)\n"
+                f"  Рефералов: {stats['total_referrals']} | "
+                f"Платящих: {stats['paying_users']} | "
+                f"Заработок: {stats['partner_earnings']:.0f} ₽"
+            )
+
+    await message.answer("\n".join(lines), parse_mode="HTML")
+
+
 @router.message(Command("ref_push"))
 async def cmd_ref_push(message: Message) -> None:
     """

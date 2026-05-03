@@ -19,6 +19,7 @@ from handlers import (
     gift_router,
     donate_router,
     referral_router,
+    partner_router,
 )
 from services import run_marketing_loop, run_notification_loop, run_expiry_watchdog
 from services.notification_service import run_inbound_watchdog
@@ -110,6 +111,7 @@ async def main() -> None:
     dp.include_router(payments_router)
     dp.include_router(admin_router)
     dp.include_router(referral_router)
+    dp.include_router(partner_router)
 
     webhook_app = create_webhook_app(bot=bot)
 
