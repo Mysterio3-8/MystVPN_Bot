@@ -194,6 +194,7 @@ def back_keyboard(callback: str = "back_to_menu", lang: str = "ru") -> InlineKey
 def admin_inline_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast")],
+        [InlineKeyboardButton(text="🤝 Партнёры", callback_data="admin_partners")],
         [InlineKeyboardButton(text="🎁 Выдать подписку", callback_data="admin_grant")],
         [InlineKeyboardButton(text="🎟️ Промокоды", callback_data="admin_promos")],
         [InlineKeyboardButton(text="🔌 Тест XRay/3x-ui", callback_data="admin_test_xray")],

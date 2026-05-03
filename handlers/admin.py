@@ -73,6 +73,48 @@ async def cmd_test_xray(message: Message) -> None:
     await message.answer(result)
 
 
+@router.callback_query(F.data == "admin_partners")
+async def admin_partners_view(callback: CallbackQuery) -> None:
+    if not is_admin(callback.from_user.id):
+        await callback.answer("❌ Нет доступа", show_alert=True)
+        return
+
+    from services.partner_service import PartnerService
+    from aiogram.types import InlineKeyboardMarkup as IKM, InlineKeyboardButton as IKB
+    async with AsyncSessionLocal() as session:
+        partners = await PartnerService.get_all_partners(session)
+        if not partners:
+            await callback.message.edit_text(
+                "🤝 <b>Партнёры</b>\n\nПартнёров пока нет.\n\nДобавить: /new_partner user_id @channel",
+                reply_markup=IKM(inline_keyboard=[[IKB(text="◀️ Назад", callback_data="admin_panel")]]),
+                parse_mode="HTML",
+            )
+            await callback.answer()
+            return
+
+        lines = ["🤝 <b>Партнёры MystVPN:</b>\n"]
+        total_earnings = 0.0
+        for p in partners:
+            stats = await PartnerService.get_stats(session, p.user_id)
+            total_earnings += stats["partner_earnings"]
+            status = "🟢" if p.is_partner else "🔴"
+            lines.append(
+                f"{status} <b>{p.partner_channel or '—'}</b> (id: <code>{p.user_id}</code>)\n"
+                f"   👥 {stats['total_referrals']} рефералов • "
+                f"💳 {stats['paying_users']} платящих • "
+                f"💰 {stats['partner_earnings']:.0f} ₽ к выплате"
+            )
+
+        lines.append(f"\n<b>Итого к выплате: {total_earnings:.0f} ₽</b>")
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=IKM(inline_keyboard=[[IKB(text="◀️ Назад", callback_data="admin_panel")]]),
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
 @router.callback_query(F.data == "admin_test_xray")
 async def admin_test_xray(callback: CallbackQuery) -> None:
     if not is_admin(callback.from_user.id):
