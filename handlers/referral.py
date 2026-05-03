@@ -9,7 +9,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
-from services import UserService, ReferralService, SubscriptionService
+from services import UserService, ReferralService, SubscriptionService, i18n
 from config import REFERRAL_BONUS_DAYS, REFERRAL_MILESTONE, REFERRAL_MILESTONE_DAYS
 
 router = Router()
