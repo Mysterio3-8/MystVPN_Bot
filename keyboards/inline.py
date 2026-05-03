@@ -154,33 +154,13 @@ def subscription_actions_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def language_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
-    languages = [
-        ("🇷🇺 Русский", "lang_ru"),
-        ("🇬🇧 English", "lang_en"),
-        ("🇫🇷 Français", "lang_fr"),
-        ("🇪🇸 Español", "lang_es"),
-        ("🇵🇹 Português", "lang_pt"),
-        ("🇹🇷 Türkçe", "lang_tr"),
-        ("🇸🇦 العربية", "lang_ar"),
-        ("🇮🇷 فارسی", "lang_fa"),
-        ("🇺🇦 Українська", "lang_uk"),
-        ("🇮🇩 Bahasa Indonesia", "lang_id"),
-        ("🇨🇳 中文", "lang_zh"),
-        ("🇯🇵 日本語", "lang_ja"),
-        ("🇰🇷 한국어", "lang_ko"),
-        ("🇩🇪 Deutsch", "lang_de"),
-        ("🇻🇳 Tiếng Việt", "lang_vi"),
-        ("🇲🇾 Bahasa Melayu", "lang_ms"),
-        ("🇮🇳 हिंदी", "lang_hi"),
-    ]
-    buttons = []
-    for i in range(0, len(languages), 2):
-        row = [InlineKeyboardButton(text=languages[i][0], callback_data=languages[i][1])]
-        if i + 1 < len(languages):
-            row.append(InlineKeyboardButton(text=languages[i + 1][0], callback_data=languages[i + 1][1]))
-        buttons.append(row)
-    buttons.append([InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="back_to_menu")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru"),
+            InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en"),
+        ],
+        [InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="back_to_menu")],
+    ])
 
 
 def back_keyboard(callback: str = "back_to_menu", lang: str = "ru") -> InlineKeyboardMarkup:
