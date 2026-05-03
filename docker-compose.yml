@@ -71,11 +71,25 @@ services:
     networks:
       - mystvpn
 
+  mtproxy:
+    image: telegrammessenger/proxy:latest
+    restart: unless-stopped
+    ports:
+      - "2443:443"
+    volumes:
+      - mtproxy_data:/data
+    environment:
+      # FakeTLS секрет — трафик выглядит как HTTPS (не меняй без нужды)
+      - SECRET=ee29b6d25c373376a63f2e10fdb2b845ed
+      # TAG получи в @MTProxybot → /newproxy → привяжи свой TG-канал
+      - TAG=ВСТАВЬ_TAG_ИЗ_MTPROXYBOT
+
 volumes:
   postgres_data:
   redis_data:
   certbot_certs:
   certbot_www:
+  mtproxy_data:
 
 networks:
   mystvpn:
