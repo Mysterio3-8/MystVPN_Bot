@@ -149,6 +149,62 @@ async def admin_broadcast_send(message: Message, state: FSMContext) -> None:
     await message.answer(f"📢 Рассылка завершена.\n✅ Отправлено: {sent}\n❌ Ошибок: {failed}")
 
 
+@router.message(Command("ref_push"))
+async def cmd_ref_push(message: Message) -> None:
+    """
+    Персонализированная реф-рассылка — каждому юзеру его уникальная ссылка.
+    Отправляет только пользователям у кого был хоть один старт (есть в БД).
+    """
+    if not is_admin(message.from_user.id):
+        return
+
+    await message.answer("⏳ Запускаю реф-рассылку...")
+
+    from services import ReferralService
+    from config import REFERRAL_BONUS_DAYS
+
+    async with AsyncSessionLocal() as session:
+        users = await UserService.get_all(session)
+
+    sent, failed, skipped = 0, 0, 0
+    for user in users:
+        # Не спамим себе
+        if user.user_id in config.admin_ids:
+            skipped += 1
+            continue
+
+        ref_link = ReferralService.get_ref_link(user.user_id)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="👥 Моя реф-ссылка", url=ref_link)],
+            [InlineKeyboardButton(text="💳 Купить подписку", callback_data="menu_buy")],
+        ])
+
+        text = (
+            f"👥 <b>Зови друзей — получай дни бесплатно!</b>\n\n"
+            f"За каждого друга которого ты пригласишь в MystVPN — "
+            f"тебе начисляется <b>+{REFERRAL_BONUS_DAYS} дней</b> бесплатного VPN.\n\n"
+            f"🔗 <b>Твоя личная ссылка:</b>\n"
+            f"<code>{ref_link}</code>\n\n"
+            f"Поделись с другом — он получит VPN, ты получишь дни. "
+            f"Дни копятся и применяются к любой подписке 👇"
+        )
+
+        try:
+            await message.bot.send_message(user.user_id, text, reply_markup=keyboard, parse_mode="HTML")
+            sent += 1
+            await asyncio.sleep(0.05)  # не флудим Telegram API
+        except Exception:
+            failed += 1
+
+    await message.answer(
+        f"✅ <b>Реф-рассылка завершена</b>\n\n"
+        f"Отправлено: <b>{sent}</b>\n"
+        f"Ошибок: <b>{failed}</b>\n"
+        f"Пропущено (админы): <b>{skipped}</b>",
+        parse_mode="HTML",
+    )
+
+
 @router.callback_query(F.data == "admin_grant")
 async def admin_grant_start(callback: CallbackQuery, state: FSMContext) -> None:
     if not is_admin(callback.from_user.id):
