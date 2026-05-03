@@ -46,8 +46,6 @@ def cabinet_keyboard(
     else:
         buttons.append([InlineKeyboardButton(text=i18n.t("btn_buy", lang), callback_data="menu_buy")])
     buttons.append([InlineKeyboardButton(text="👥 Рефералы", callback_data="cabinet_referral")])
-    buttons.append([InlineKeyboardButton(text=i18n.t("btn_bypass_help", lang), callback_data="cabinet_bypass_help")])
-    buttons.append([InlineKeyboardButton(text="⚠️ Не подключается?", callback_data="cabinet_no_connection")])
     buttons.append([InlineKeyboardButton(text=i18n.t("btn_back", lang), callback_data="back_to_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
