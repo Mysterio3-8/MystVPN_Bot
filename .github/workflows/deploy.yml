@@ -15,7 +15,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
+            set -ex
             # Авторизуем локальный ключ Claude (одноразово)
             mkdir -p ~/.ssh && chmod 700 ~/.ssh
             LOCAL_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDPbqqqfChbfjqc0PBEU4yHGmiLHPxbtNdjaia2raKKJCMOychsLrKH/LVk78rE6GSsBQ1EEhwZNaSN6ruAt+p+D1c8JtDXxhijic3qdD93OzotKJBJnI6Ew1gL91/R0DfRuBSjCd3zEkhscxgYy9eThHM1MZqvB8zjP2QlZ45YJgNvzLHMQgjKywQ/41L0tB8xyJhXduxGOPOcTztCBbnogmcpM0Z4YIJCqO3zjuG/EAEwrf+bkyC/nIy9phDb+VdYFlgHjKwobuTt6L2B2dAVhxX6JtKXLLpsmr9v4gJXSlM5ncYQDBWEVqTYWSYoV8y07vBbny8tkdebEcGkJWXC+a4yKvavHzeT/mIRSfw3/UJo89u0nIC2y7dTKISVQ7bj2p6il7Jsw/QwP/Ki3RtEICLKHOelWUByY7QY64/h3CL0kDsE2YO+tKvnBp8oY05+H51eWtQCTV/SQDsiXfG1xUF6AFx12n3nDoas33EZvHNT9UTh36vpoq3KSdnhOJM= infinix\infinix@Infinix"
