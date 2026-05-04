@@ -1,9 +1,0 @@
-aiogram==3.13.0
-SQLAlchemy==2.0.36
-asyncpg==0.30.0
-alembic==1.14.0
-redis==5.2.0
-yookassa==3.4.0
-python-dotenv==1.0.1
-aiohttp>=3.9.0,<3.11
-aiohttp-socks==0.10.1

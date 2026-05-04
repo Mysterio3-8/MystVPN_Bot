@@ -28,8 +28,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Claude
-.claude/
+# Claude (локальные настройки — не коммитить; команды и CLAUDE.md — коммитить)
+.claude/settings.local.json
+Support_Bot/.env
 
 # Misc
 *.bak

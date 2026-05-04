@@ -10,7 +10,7 @@
 - `pages/` — подстраницы: features, pricing, setup, faq
 
 ## Деплой
-Файлы лежат на сервере в `/root/MystBot/site/`.
+Файлы копируются в `/var/www/guide/` при каждом git push → GitHub Actions.
 nginx раздаёт их напрямую с домена keybest.cc.
 
 ## Правила

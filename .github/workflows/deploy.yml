@@ -65,6 +65,9 @@ jobs:
             echo ">>> Rebuild & restart bot..."
             docker compose up -d --build bot
 
+            echo ">>> Rebuild & restart support-bot..."
+            docker compose up -d --build support-bot || true
+
             echo ">>> Waiting for DB..."
             sleep 10
 

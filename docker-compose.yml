@@ -73,6 +73,15 @@ services:
     networks:
       - mystvpn
 
+  support-bot:
+    build: ./Support_Bot
+    restart: unless-stopped
+    env_file: ./Support_Bot/.env
+    volumes:
+      - support_db:/app
+    networks:
+      - mystvpn
+
   mtproxy:
     image: telegrammessenger/proxy:latest
     restart: unless-stopped
@@ -90,6 +99,7 @@ volumes:
   certbot_certs:
   certbot_www:
   mtproxy_data:
+  support_db:
 
 networks:
   mystvpn:
