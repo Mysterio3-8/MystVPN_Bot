@@ -15,7 +15,6 @@ from services import (
     fmt_key,
     i18n,
     schedule_trial_sequence,
-    send_referral_offer,
 )
 from keyboards import main_menu_keyboard, about_keyboard, back_keyboard
 from config import PLANS, TRIAL_DAYS
@@ -197,10 +196,6 @@ async def trial_activate(callback: CallbackQuery) -> None:
         parse_mode="HTML",
     )
     await schedule_trial_sequence(user_id, trial_end)
-    try:
-        await send_referral_offer(callback.bot, user_id)
-    except Exception:
-        pass
     await callback.answer()
 
 

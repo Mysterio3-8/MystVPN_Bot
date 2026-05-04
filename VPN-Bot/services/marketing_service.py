@@ -158,15 +158,6 @@ async def _send_abandoned_checkout_user(bot, user_id: int, plan_key: str) -> Non
     )
 
 
-async def send_referral_offer(bot, user_id: int) -> None:
-    link = ReferralService.get_ref_link(user_id)
-    await bot.send_message(
-        user_id,
-        "👥 <b>Дай другу 3 дня VPN — получишь 7 дней себе</b>\n\n"
-        f"Твоя ссылка:\n<code>{link}</code>",
-        parse_mode="HTML",
-    )
-
 
 async def run_marketing_loop(bot) -> None:
     logger.info("📣 Marketing service started")
