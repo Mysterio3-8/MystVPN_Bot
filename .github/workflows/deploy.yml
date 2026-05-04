@@ -32,19 +32,13 @@ jobs:
             # ── Рабочая папка ──
             cd /root/Full_Bot
 
-            # ── Перемещаем .env из корня в VPN-Bot/ если он там ещё ──
-            if [ -f /root/Full_Bot/.env ] && [ ! -f /root/Full_Bot/VPN-Bot/.env ]; then
-              echo ">>> Moving .env → VPN-Bot/.env"
-              cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
-            fi
-
             echo ">>> Git sync (reset to remote)..."
             git fetch origin
             git reset --hard origin/master
 
-            # ── После pull: убедимся что .env в VPN-Bot/ ──
+            # ── Копируем .env из корня в VPN-Bot/ (VPN-Bot/ создана git reset выше) ──
             if [ -f /root/Full_Bot/.env ] && [ ! -f /root/Full_Bot/VPN-Bot/.env ]; then
-              echo ">>> Copying .env to VPN-Bot/"
+              echo ">>> Copying .env → VPN-Bot/.env"
               cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
             fi
 
