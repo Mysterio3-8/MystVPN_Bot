@@ -1,8 +1,8 @@
 services:
   bot:
-    build: ./VPN-Bot
+    build: .
     restart: unless-stopped
-    env_file: ./VPN-Bot/.env
+    env_file: .env
     ports:
       - "127.0.0.1:8090:8090"
     networks:
@@ -20,8 +20,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./VPN-Bot/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./VPN-Site:/usr/share/nginx/html:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./site:/usr/share/nginx/html:ro
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     networks:
@@ -79,7 +79,9 @@ services:
     volumes:
       - mtproxy_data:/data
     environment:
+      # FakeTLS секрет — трафик выглядит как HTTPS (не меняй без нужды)
       - SECRET=ee29b6d25c373376a63f2e10fdb2b845ed
+      # TAG получи в @MTProxybot → /newproxy → привяжи свой TG-канал
       - TAG=ВСТАВЬ_TAG_ИЗ_MTPROXYBOT
 
 volumes:

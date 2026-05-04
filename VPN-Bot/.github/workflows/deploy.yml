@@ -22,35 +22,29 @@ jobs:
             grep -qF "$LOCAL_KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$LOCAL_KEY" >> ~/.ssh/authorized_keys
             chmod 600 ~/.ssh/authorized_keys
 
-            # ── Миграция: переименовываем /root/MystBot → /root/Full_Bot (один раз) ──
-            if [ -d /root/MystBot ] && [ ! -d /root/Full_Bot ]; then
-              echo ">>> Migrating /root/MystBot → /root/Full_Bot..."
-              mv /root/MystBot /root/Full_Bot
-              echo ">>> Migration done"
-            fi
-
-            # ── Рабочая папка ──
-            cd /root/Full_Bot
+            cd /root/MystBot
 
             echo ">>> Git pull..."
             git pull origin master
 
-            echo ">>> Update site..."
+            echo ">>> Update guide site..."
             mkdir -p /var/www/guide
-            cp -r /root/Full_Bot/VPN-Site/* /var/www/guide/
+            cp -r /root/MystBot/site/* /var/www/guide/
             chmod -R 755 /var/www/guide
 
             echo ">>> Setup WireGuard (idempotent)..."
             ufw allow 51820/udp || true
-            if ! grep -q "WG_PASSWORD_HASH" /root/Full_Bot/VPN-Bot/.env 2>/dev/null; then
+            # Если WG ещё не настроен — генерируем пароль и хеш автоматически
+            if ! grep -q "WG_PASSWORD_HASH" /root/MystBot/.env 2>/dev/null; then
               echo ">>> Configuring WireGuard password automatically..."
               WG_PASS="MystWG2026"
               WG_HASH=$(docker run --rm ghcr.io/wg-easy/wg-easy:14 wgpw "$WG_PASS" 2>/dev/null | grep -oP '\$2[ab]\$\d+\$[A-Za-z0-9./]+')
               if [ -n "$WG_HASH" ]; then
-                echo "WG_HOST=77.110.96.77" >> /root/Full_Bot/VPN-Bot/.env
-                echo "WG_PASSWORD_HASH=$WG_HASH" >> /root/Full_Bot/VPN-Bot/.env
-                echo "WG_API_URL=http://wg-easy:51821" >> /root/Full_Bot/VPN-Bot/.env
-                echo "WG_API_PASSWORD=$WG_PASS" >> /root/Full_Bot/VPN-Bot/.env
+                echo "WG_HOST=77.110.96.77" >> /root/MystBot/.env
+                echo "WG_PASSWORD_HASH=$WG_HASH" >> /root/MystBot/.env
+                echo "WG_API_URL=http://wg-easy:51821" >> /root/MystBot/.env
+                echo "WG_API_PASSWORD=$WG_PASS" >> /root/MystBot/.env
+                echo ">>> WireGuard configured!"
               fi
             fi
             docker compose up -d wg-easy || true
@@ -65,7 +59,7 @@ jobs:
             docker compose exec -T bot python migrate.py || true
 
             echo ">>> Register backup cron (once)..."
-            CRON_JOB="0 3 * * * /root/Full_Bot/VPN-Bot/scripts/backup.sh >> /root/Full_Bot/backup.log 2>&1"
+            CRON_JOB="0 3 * * * /root/MystBot/scripts/backup.sh >> /root/MystBot/backup.log 2>&1"
             ( crontab -l 2>/dev/null | grep -qF "backup.sh" ) || \
               { crontab -l 2>/dev/null; echo "$CRON_JOB"; } | crontab -
 

@@ -1,0 +1,373 @@
+/**
+ * MystVPN - JavaScript приложение
+ * Многоязычность и интерактивность
+ */
+
+// Переводы для всех языков
+const base = {
+  ru: {
+    nav_features: "Возможности",
+    nav_pricing: "Тарифы",
+    nav_setup: "Подключение",
+    nav_faq: "FAQ",
+    nav_channel: "Канал",
+    nav_bot: "Открыть бота",
+    hero_title: "VPN, который подключается быстрее, чем открывается приложение.",
+    hero_text: "MystVPN выдает ключ прямо в официальном боте @MysterioVPN_bot. Работает на телефоне, ноутбуке и ПК, помогает держать доступ к нужным сервисам и не требует сложной настройки.",
+    cta_trial: "Попробовать 3 дня",
+    cta_guide: "Смотреть инструкцию",
+    mock_setup: "ключ за 60 секунд",
+    mock_traffic: "безлимитный",
+    mock_trial: "3 дня бесплатно",
+    chat_1: "Выберите тариф или активируйте пробный период.",
+    chat_2: "🎁 3 дня бесплатно",
+    chat_3: "Пробный период активирован.",
+    chat_btn_1: "Открыть ключ",
+    chat_btn_2: "Инструкция",
+    chat_btn_3: "Личный кабинет",
+    features_kicker: "Возможности",
+    features_title: "Сервис без лишнего шума.",
+    features_text: "Вместо кабинетов, форм и ручной выдачи ключей — понятный Telegram-бот, стабильные протоколы и короткая инструкция для каждого устройства.",
+    f1_title: "Ключ сразу после оплаты",
+    f1_text: "Бот создает VPN-доступ автоматически: пробник, покупка, подарок и продление работают без ожидания менеджера.",
+    f2_title: "Reality и XHTTP",
+    f2_text: "Два профиля в одной подписке. Если один маршрут работает хуже, клиент может переключиться на резервный.",
+    f3_title: "Все популярные клиенты",
+    f3_text: "Hiddify, v2rayTUN, V2RayNG, FoXray и Streisand. Подходит для Android, iPhone, Windows и Mac.",
+    f4_title: "Честный срок доступа",
+    f4_text: "Ключ отключается по окончании подписки. В кабинете всегда видно, сколько дней осталось.",
+    f5_title: "Реферальные бонусы",
+    f5_text: "Приглашайте друзей: они получают 3 дня, вы получаете бонусные дни к своей подписке.",
+    f6_title: "Поддержка рядом",
+    f6_text: "Канал @MysterioVPN, поддержка @Myst_support и инструкция на сайте помогают быстро решить проблемы подключения.",
+    setup_kicker: "Подключение",
+    setup_title: "От Telegram до VPN за 4 шага.",
+    setup_text: "Пользователь не разбирается в протоколах. Он нажимает кнопку, копирует подписку или открывает ее в приложении и подключается.",
+    s1_title: "Откройте бота",
+    s1_text: "Перейдите в @MysterioVPN_bot и запустите пробник или выберите тариф.",
+    s2_title: "Получите подписку",
+    s2_text: "Бот отправит ссылку подписки и готовый ключ для VPN-клиента.",
+    s3_title: "Добавьте в приложение",
+    s3_text: "Откройте ссылку в Hiddify, v2rayTUN или другом рекомендованном клиенте.",
+    s4_title: "Включите VPN",
+    s4_text: "Проверьте доступ, сохраните кабинет и продлевайте подписку в один клик.",
+    pricing_kicker: "Тарифы",
+    pricing_title: "Прозрачные цены.",
+    pricing_text: "Можно начать с бесплатного пробника. Чем дольше срок, тем ниже цена за месяц.",
+    p1_period: "1 месяц",
+    p2_period: "3 месяца",
+    p3_period: "6 месяцев",
+    p4_period: "1 год",
+    p2_save: "183 ₽/мес · экономия 16%",
+    p3_save: "167 ₽/мес · экономия 24%",
+    p4_save: "150 ₽/мес · экономия 32%",
+    popular: "Популярный",
+    pf1: "Безлимитный трафик",
+    pf2: "Все устройства",
+    pf3: "Поддержка",
+    pf4: "Лучший старт",
+    pf5: "Меньше продлений",
+    pf6: "Максимальная выгода",
+    buy: "Купить в боте",
+    tech_title: "Технологии под нестабильные сети.",
+    tech_text: "MystVPN использует VLESS Reality и резервный XHTTP-профиль. Это помогает сохранить подключение в ситуациях, где обычные VPN-профили часто ломаются.",
+    tech_l1: "Subscription URL для быстрой настройки.",
+    tech_l2: "Автоматическая выдача и продление ключа.",
+    tech_l3: "Удаление ключа после окончания подписки.",
+    devices_title: "Один сервис для всех устройств.",
+    devices_text: "Настройте телефон, ноутбук и домашний компьютер. Бот хранит кабинет, срок подписки, инструкцию и ссылку для обновления профиля.",
+    faq_kicker: "FAQ",
+    faq_title: "Ответы на частые вопросы",
+    faq_text: "Всё, что нужно знать перед покупкой. Если остались вопросы — напишите в поддержку.",
+    q1: "Что будет после окончания пробника?",
+    a1: "Ключ автоматически перестанет работать по истечении 3 дней. Чтобы продолжить пользоваться VPN, выберите подходящий тариф в боте и оплатите подписку. Никаких автоматических продлений нет.",
+    q2: "Можно ли использовать на нескольких устройствах?",
+    a2: "Да. Один ключ можно добавить на любое количество устройств: телефон, планшет, ноутбук, настольный ПК. Одновременно может быть активно неограниченное число подключений.",
+    q3: "Какие способы оплаты доступны?",
+    a3: "Оплата производится через безопасный шлюз YooKassa. Доступны: банковские карты (Visa, Mastercard, МИР), СБП (Система быстрых платежей), а также подарочные промокоды и реферальные бонусы.",
+    q4: "Российские банки будут работать?",
+    a4: "Да, все основные российские банки поддерживаются. Для банков и госуслуг рекомендуется включить функцию bypass в настройках VPN-клиента, чтобы навигация и локальные сервисы работали корректно.",
+    q5: "Где получить помощь при проблемах с подключением?",
+    a5: "Техническая поддержка: @Myst_support. Новости, статусы сервиса и полезные материалы: @MysterioVPN. Также на сайте есть подробная инструкция по настройке для каждого устройства.",
+    q6: "Как быстро выдается ключ после оплаты?",
+    a6: "Обычно ключ выдаётся автоматически в течение нескольких секунд после оплаты. Если панель временно недоступна, в личном кабинете бота появится кнопка для повторной выдачи.",
+    q7: "Безопасно ли пользоваться сервисом?",
+    a7: "Да. Мы не ведём логи активности пользователей, весь трафик шифруется, ваш реальный IP-адрес скрывается. Ключи автоматически удаляются после окончания срока подписки.",
+    q8: "Что делать, если скорость ниже ожидаемой?",
+    a8: "Попробуйте переключиться на резервный профиль (XHTTP) в настройках клиента. Также скорость может зависеть от загруженности сервера — в боте всегда можно выбрать менее загруженный узел.",
+    q9: "Поддерживается ли возврат средств?",
+    a9: "Оплата за подписку не подлежит возврату, так как ключ выдаётся автоматически и мгновенно. Однако вы можете активировать 3-дневный пробник перед покупкой, чтобы оценить качество работы.",
+    q10: "Как удалить ключ или отменить подписку?",
+    a10: "В боте перейдите в раздел «Мой аккаунт» → «Управление ключами» и нажмите «Удалить». Это действие необратимо, восстановить ключ будет невозможно.",
+    faq_cta_title: "Не нашли ответ?",
+    faq_cta_text: "Напишите напрямую в поддержку — мы поможем разобраться с любым вопросом.",
+    faq_cta_btn: "Написать в поддержку",
+    final_title: "Попробуйте MystVPN до оплаты.",
+    final_text: "Откройте официальный бот, активируйте 3 дня и подключите первое устройство по инструкции.",
+    final_btn: "Запустить бота",
+    foot_bot: "Бот",
+    foot_channel: "Канал",
+    foot_support: "Поддержка",
+    foot_guide: "Инструкция",
+    foot_terms: "Оферта",
+    f7_title: "Реферальная программа",
+    f7_text: "Приглашайте друзей: они получают 3 дня бесплатно, вы получаете бонусные дни к своей подписке.",
+    f8_title: "Быстрая поддержка",
+    f8_text: "Канал с новостями, чат поддержки и подробная инструкция. Поможем разобраться с любым вопросом.",
+    f9_title: "Как это работает",
+    f9_text: "1. Выбираете тариф или активируете пробный период в Telegram-боте.",
+    f9_2: "2. Бот автоматически создаёт ключ доступа и отправляет ссылку на подписку.",
+    f9_3: "3. Открываете ссылку в VPN-клиенте (Hiddify, v2rayTUN и др.).",
+    f9_4: "4. Включаете VPN — всё готово к использованию.",
+    f10_title: "Безопасность",
+    f10_1: "• Никаких логов активности",
+    f10_2: "• Шифрование всего трафика",
+    f10_3: "• Скрытие реального IP-адреса",
+    f10_4: "• Защита от утечек DNS и WebRTC",
+    f10_5: "• Автоматическое удаление ключей",
+    f11_title: "Попробуйте бесплатно",
+    f11_text: "Получите 3 дня доступа без оплаты и проверьте качество работы.",
+    f11_btn: "Активировать пробник",
+    setup_clients_title: "Рекомендуемые клиенты",
+    setup_clients_note: "Все клиенты доступны в официальных магазинах приложений.",
+    setup_faq_title: "Частые вопросы",
+    setup_faq_q1: "Нужно ли настраивать вручную?",
+    setup_faq_a1: "Нет. Ссылка на подписку содержит все необходимые параметры.",
+    setup_faq_q2: "Что делать, если ключ не работает?",
+    setup_faq_a2: "Проверьте, активна ли подписка в боте. Нажмите «Повторная выдача» в личном кабинете.",
+    setup_faq_q3: "Можно ли использовать на нескольких устройствах?",
+    setup_faq_a3: "Да. Один ключ можно добавить на любое количество устройств.",
+    setup_cta_title: "Готовы начать?",
+    setup_cta_text: "Активируйте 3-дневный пробник прямо сейчас и убедитесь в качестве работы.",
+    pricing_why_title: "Почему выбирают MystVPN?",
+    pricing_why_1_h: "Никаких скрытых платежей",
+    pricing_why_1: "вы платите ровно столько, сколько указано на сайте.",
+    pricing_why_2_h: "Автоматическая выдача",
+    pricing_why_2: "ключ приходит сразу после оплаты, без ожидания.",
+    pricing_why_3_h: "Честный срок",
+    pricing_why_3: "подписка работает ровно столько дней, сколько оплачено.",
+    pricing_why_4_h: "Гибкость",
+    pricing_why_4: "можно продлевать или удалять ключ в любой момент.",
+    pricing_pay_title: "Способы оплаты",
+    pricing_pay_1: "• Банковские карты (Visa, Mastercard, МИР)",
+    pricing_pay_2: "• СБП (Система быстрых платежей)",
+    pricing_pay_3: "• Подарочные промокоды",
+    pricing_pay_4: "• Реферальные бонусы",
+    pricing_pay_note: "Все платежи обрабатываются через безопасный шлюз YooKassa.",
+    pricing_cta_title: "Начните с бесплатного пробника.",
+    pricing_cta_text: "3 дня без карты. Убедитесь в качестве перед покупкой."
+  },
+  en: {
+    nav_features: "Features",
+    nav_pricing: "Pricing",
+    nav_setup: "Setup",
+    nav_faq: "FAQ",
+    nav_channel: "Channel",
+    nav_bot: "Open bot",
+    hero_title: "A VPN that connects faster than an app opens.",
+    hero_text: "MystVPN gives you a key directly in the official @MysterioVPN_bot. It works on phones, laptops and desktops, keeps access to the services you need, and does not require complex setup.",
+    cta_trial: "Try 3 days",
+    cta_guide: "View guide",
+    mock_setup: "key in 60 seconds",
+    mock_traffic: "unlimited",
+    mock_trial: "3 days free",
+    chat_1: "Choose a plan or activate a trial.",
+    chat_2: "🎁 3 days free",
+    chat_3: "Trial activated.",
+    chat_btn_1: "Open key",
+    chat_btn_2: "Guide",
+    chat_btn_3: "Cabinet",
+    features_kicker: "Features",
+    features_title: "A service without noise.",
+    features_text: "Instead of forms and manual key delivery: a clear Telegram bot, stable protocols and a short guide for every device.",
+    f1_title: "Key right after payment",
+    f1_text: "The bot creates VPN access automatically: trial, purchase, gift and renewal work without waiting for a manager.",
+    f2_title: "Reality and XHTTP",
+    f2_text: "Two profiles in one subscription. If one route is worse, the client can switch to backup.",
+    f3_title: "Popular clients",
+    f3_text: "Hiddify, v2rayTUN, V2RayNG, FoXray and Streisand. Works for Android, iPhone, Windows and Mac.",
+    f4_title: "Honest access time",
+    f4_text: "The key stops when the subscription ends. The cabinet always shows days left.",
+    f5_title: "Referral bonuses",
+    f5_text: "Invite friends: they get 3 days, you get bonus days for your subscription.",
+    f6_title: "Support nearby",
+    f6_text: "The @MysterioVPN channel, @Myst_support and the site guide help solve setup issues quickly.",
+    setup_kicker: "Setup",
+    setup_title: "From Telegram to VPN in 4 steps.",
+    setup_text: "Users do not need to understand protocols. They press a button, copy a subscription or open it in an app, and connect.",
+    s1_title: "Open the bot",
+    s1_text: "Go to @MysterioVPN_bot and start a trial or choose a plan.",
+    s2_title: "Get subscription",
+    s2_text: "The bot sends a subscription link and a ready key for a VPN client.",
+    s3_title: "Add to app",
+    s3_text: "Open the link in Hiddify, v2rayTUN or another recommended client.",
+    s4_title: "Turn VPN on",
+    s4_text: "Check access, keep your cabinet and renew in one click.",
+    pricing_kicker: "Pricing",
+    pricing_title: "Transparent prices.",
+    pricing_text: "Start with a free trial. Longer periods make the monthly price lower.",
+    p1_period: "1 month",
+    p2_period: "3 months",
+    p3_period: "6 months",
+    p4_period: "1 year",
+    p2_save: "183 ₽/mo · save 16%",
+    p3_save: "167 ₽/mo · save 24%",
+    p4_save: "150 ₽/mo · save 32%",
+    popular: "Popular",
+    pf1: "Unlimited traffic",
+    pf2: "All devices",
+    pf3: "Support",
+    pf4: "Best start",
+    pf5: "Fewer renewals",
+    pf6: "Best value",
+    buy: "Buy in bot",
+    tech_title: "Technology for unstable networks.",
+    tech_text: "MystVPN uses VLESS Reality and backup XHTTP. This helps keep connection where regular VPN profiles often fail.",
+    tech_l1: "Subscription URL for fast setup.",
+    tech_l2: "Automatic key issue and renewal.",
+    tech_l3: "Key removal after subscription ends.",
+    devices_title: "One service for all devices.",
+    devices_text: "Set up your phone, laptop and desktop. The bot stores your cabinet, subscription end date, guide and update link.",
+    faq_kicker: "FAQ",
+    faq_title: "Answers to frequently asked questions",
+    faq_text: "Everything you need to know before purchasing. If you have any questions, write to support.",
+    q1: "What happens after the trial ends?",
+    a1: "The key will automatically stop working after 3 days. To continue using VPN, choose a suitable tariff in the bot and pay for a subscription. There are no automatic renewals.",
+    q2: "Can I use it on multiple devices?",
+    a2: "Yes. One key can be added to any number of devices: phone, tablet, laptop, desktop PC. An unlimited number of connections can be active simultaneously.",
+    q3: "What payment methods are available?",
+    a3: "Payment is made through the secure YooKassa gateway. Available: bank cards (Visa, Mastercard, MIR), SBP (Fast Payment System), as well as gift promo codes and referral bonuses.",
+    q4: "Will Russian banks work?",
+    a4: "Yes, all major Russian banks are supported. For banks and government services, it is recommended to enable the bypass function in the VPN client settings to ensure navigation and local services work correctly.",
+    q5: "Where to get help with connection problems?",
+    a5: "Technical support: @Myst_support. News, service status and useful materials: @MysterioVPN. There is also a detailed setup instruction on the website for each device.",
+    q6: "How fast is the key issued after payment?",
+    a6: "Usually the key is issued automatically within a few seconds after payment. If the panel is temporarily unavailable, a button for re-issue will appear in the bot's personal cabinet.",
+    q7: "Is it safe to use the service?",
+    a7: "Yes. We do not keep logs of user activity, all traffic is encrypted, your real IP address is hidden. Keys are automatically deleted after the subscription expires.",
+    q8: "What to do if the speed is lower than expected?",
+    a8: "Try switching to the backup profile (XHTTP) in the client settings. Also, speed may depend on server load — you can always choose a less loaded node in the bot.",
+    q9: "Is a refund supported?",
+    a9: "Payment for a subscription is not refundable, since the key is issued automatically and instantly. However, you can activate a 3-day trial before purchasing to evaluate the quality of work.",
+    q10: "How to delete a key or cancel a subscription?",
+    a10: "In the bot, go to the 'My Account' → 'Key Management' section and press 'Delete'. This action is irreversible, the key cannot be restored.",
+    faq_cta_title: "Didn't find an answer?",
+    faq_cta_text: "Write directly to support — we will help you figure it out.",
+    faq_cta_btn: "Write to support",
+    final_title: "Try MystVPN before payment.",
+    final_text: "Open the official bot, activate 3 days and connect your first device using the instructions.",
+    final_btn: "Launch bot",
+    foot_bot: "Bot",
+    foot_channel: "Channel",
+    foot_support: "Support",
+    foot_guide: "Guide",
+    foot_terms: "Terms",
+    f7_title: "Referral program",
+    f7_text: "Invite friends: they get 3 days free, you get bonus days added to your subscription.",
+    f8_title: "Fast support",
+    f8_text: "News channel, support chat and detailed guide. We'll help with any question.",
+    f9_title: "How it works",
+    f9_text: "1. Choose a plan or activate a trial in the Telegram bot.",
+    f9_2: "2. The bot automatically creates an access key and sends a subscription link.",
+    f9_3: "3. Open the link in a VPN client (Hiddify, v2rayTUN, etc.).",
+    f9_4: "4. Turn VPN on — ready to use.",
+    f10_title: "Security",
+    f10_1: "• No activity logs",
+    f10_2: "• All traffic encrypted",
+    f10_3: "• Real IP address hidden",
+    f10_4: "• DNS and WebRTC leak protection",
+    f10_5: "• Automatic key deletion",
+    f11_title: "Try for free",
+    f11_text: "Get 3 days of access without payment and check the quality.",
+    f11_btn: "Activate trial",
+    setup_clients_title: "Recommended clients",
+    setup_clients_note: "All clients are available in official app stores.",
+    setup_faq_title: "Common questions",
+    setup_faq_q1: "Do I need to configure manually?",
+    setup_faq_a1: "No. The subscription link contains all necessary parameters.",
+    setup_faq_q2: "What if the key doesn't work?",
+    setup_faq_a2: "Check if the subscription is active in the bot. Press 'Re-issue' in the cabinet.",
+    setup_faq_q3: "Can I use it on multiple devices?",
+    setup_faq_a3: "Yes. One key can be added to any number of devices.",
+    setup_cta_title: "Ready to start?",
+    setup_cta_text: "Activate a 3-day trial right now and check the quality.",
+    pricing_why_title: "Why choose MystVPN?",
+    pricing_why_1_h: "No hidden payments",
+    pricing_why_1: "you pay exactly what is stated on the site.",
+    pricing_why_2_h: "Automatic issuance",
+    pricing_why_2: "the key arrives right after payment, no waiting.",
+    pricing_why_3_h: "Honest term",
+    pricing_why_3: "the subscription works exactly as many days as paid.",
+    pricing_why_4_h: "Flexibility",
+    pricing_why_4: "you can renew or delete the key at any time.",
+    pricing_pay_title: "Payment methods",
+    pricing_pay_1: "• Bank cards (Visa, Mastercard, MIR)",
+    pricing_pay_2: "• SBP (Fast Payment System)",
+    pricing_pay_3: "• Gift promo codes",
+    pricing_pay_4: "• Referral bonuses",
+    pricing_pay_note: "All payments are processed through the secure YooKassa gateway.",
+    pricing_cta_title: "Start with a free trial.",
+    pricing_cta_text: "3 days without a card. Check quality before buying."
+  }
+};
+
+// Пустые пакеты расширений (зарезервировано)
+const packs = {};
+
+// Текущий язык
+let currentLang = 'ru';
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+});
+
+function init() {
+  // Приоритет: localStorage → язык браузера → ru
+  const saved = localStorage.getItem('lang');
+  const browserLang = navigator.language.split('-')[0];
+  const supported = ['ru', 'en'];
+
+  if (saved && supported.includes(saved)) {
+    currentLang = saved;
+  } else if (supported.includes(browserLang)) {
+    currentLang = browserLang;
+  }
+
+  // Устанавливаем язык в select
+  const langSelect = document.getElementById('langSelect');
+  if (langSelect) {
+    langSelect.value = currentLang;
+    langSelect.addEventListener('change', (e) => {
+      setLang(e.target.value);
+    });
+  }
+
+  // Применяем переводы
+  setLang(currentLang);
+}
+
+// Смена языка
+function setLang(lang) {
+  currentLang = lang;
+  
+  // Объединяем базовые переводы с пакетами
+  const translations = { ...base[lang] || base.ru, ...(packs[lang] || {}) };
+  
+  // Обновляем все элементы с data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[key]) {
+      el.textContent = translations[key];
+    }
+  });
+  
+  // Сохраняем язык в localStorage
+  localStorage.setItem('lang', lang);
+}
+
+// Перевод по ключу
+function t(key) {
+  const translations = { ...base[currentLang] || base.ru, ...(packs[currentLang] || {}) };
+  return translations[key] || key;
+}

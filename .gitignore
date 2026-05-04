@@ -1,25 +1,36 @@
-# Secrets
-.env
-deploy_key
-deploy_key.pub
-deploy_to_server.ps1
-
 # Python
 __pycache__/
-**/__pycache__/
 *.pyc
 *.pyo
-*.pyd
 .venv/
 venv/
-
-# Logs & DB
 *.log
+
+# Secrets
+VPN-Bot/.env
+Bot-Traffic/.env
 *.db
+
+# Rust build artifacts
+cpn-protocol/target/
+cpn-app/target/
+cpn-app/src-tauri/target/
+
+# Node
+cpn-app/node_modules/
+node_modules/
 
 # IDE
 .idea/
-.vscode/
+*.iml
 
-# Junk
-3x-ui-main/
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Misc
+*.bak
+backup.log
