@@ -32,8 +32,19 @@ jobs:
             # ── Рабочая папка ──
             cd /root/Full_Bot
 
+            # ── Перемещаем .env из корня в VPN-Bot/ если он там ещё ──
+            if [ -f /root/Full_Bot/.env ] && [ ! -f /root/Full_Bot/VPN-Bot/.env ]; then
+              echo ">>> Moving .env → VPN-Bot/.env"
+              cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
+            fi
+
             echo ">>> Git pull..."
             git pull origin master
+
+            # ── После pull: убедимся что .env в VPN-Bot/ ──
+            if [ -f /root/Full_Bot/.env ] && [ ! -f /root/Full_Bot/VPN-Bot/.env ]; then
+              cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
+            fi
 
             echo ">>> Update site..."
             mkdir -p /var/www/guide
