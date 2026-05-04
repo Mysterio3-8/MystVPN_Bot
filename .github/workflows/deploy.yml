@@ -38,11 +38,13 @@ jobs:
               cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
             fi
 
-            echo ">>> Git pull..."
-            git pull origin master
+            echo ">>> Git sync (reset to remote)..."
+            git fetch origin
+            git reset --hard origin/master
 
             # ── После pull: убедимся что .env в VPN-Bot/ ──
             if [ -f /root/Full_Bot/.env ] && [ ! -f /root/Full_Bot/VPN-Bot/.env ]; then
+              echo ">>> Copying .env to VPN-Bot/"
               cp /root/Full_Bot/.env /root/Full_Bot/VPN-Bot/.env
             fi
 
