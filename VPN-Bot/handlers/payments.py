@@ -80,6 +80,10 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
     user_id = callback.from_user.id
     return_url = f"https://t.me/{config.bot_username}"
 
+    async with AsyncSessionLocal() as session:
+        _u = await UserService.get(session, callback.from_user.id)
+        lang = _u.language if _u else "ru"
+
     discount = await PromoService.get_discount(user_id)
     if discount:
         pct = discount["percent"]
@@ -151,10 +155,11 @@ async def pay_yookassa(callback: CallbackQuery) -> None:
             reply_markup=keyboard,
             parse_mode="HTML",
         )
-    except Exception:
-        async with AsyncSessionLocal() as session:
-            user = await UserService.get(session, callback.from_user.id)
-            lang = user.language if user else "ru"
+    except Exception as _e:
+        import logging as _log
+        _log.getLogger(__name__).error(
+            f"Yookassa card error user={user_id} plan={plan_key}: {_e}", exc_info=True
+        )
         await callback.message.edit_text(
             i18n.t("err_payment_create", lang),
             reply_markup=back_keyboard("menu_buy"),

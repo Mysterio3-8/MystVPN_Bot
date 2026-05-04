@@ -10,7 +10,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
 from services import UserService, ReferralService, SubscriptionService, i18n
-from config import REFERRAL_BONUS_DAYS, REFERRAL_MILESTONE, REFERRAL_MILESTONE_DAYS
+from config import REFERRAL_BONUS_DAYS
 
 router = Router()
 
@@ -24,7 +24,6 @@ async def _referral_text(user_id: int, back_target: str = "menu_cabinet") -> tup
 
     lang = user.language if user else "ru"
     ref_link = ReferralService.get_ref_link(user_id)
-    until_milestone = REFERRAL_MILESTONE - (count % REFERRAL_MILESTONE) if count % REFERRAL_MILESTONE != 0 else REFERRAL_MILESTONE
 
     text = (
         i18n.t("ref_screen_title", lang) + "\n\n"
@@ -32,11 +31,9 @@ async def _referral_text(user_id: int, back_target: str = "menu_cabinet") -> tup
         + i18n.t("ref_screen_link_label", lang) + "\n<code>" + ref_link + "</code>\n\n"
         + i18n.t("ref_screen_stats_label", lang) + "\n"
         + i18n.t("ref_screen_friends_count", lang, count=count) + "\n"
-        + i18n.t("ref_screen_days_total", lang, days=extra_days) + "\n"
-        + i18n.t("ref_screen_until_milestone", lang, milestone=REFERRAL_MILESTONE, remaining=until_milestone) + "\n\n"
+        + i18n.t("ref_screen_days_total", lang, days=extra_days) + "\n\n"
         + i18n.t("ref_screen_terms_title", lang) + "\n"
-        + i18n.t("ref_screen_per_friend", lang, days=REFERRAL_BONUS_DAYS) + "\n"
-        + i18n.t("ref_screen_milestone_bonus", lang, milestone=REFERRAL_MILESTONE, days=REFERRAL_MILESTONE_DAYS) + "\n\n"
+        + i18n.t("ref_screen_per_friend", lang, days=REFERRAL_BONUS_DAYS) + "\n\n"
         + i18n.t("ref_screen_apply_hint", lang)
     )
 

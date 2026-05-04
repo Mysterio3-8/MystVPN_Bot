@@ -1,7 +1,10 @@
+import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database import AsyncSessionLocal
+
+_log = logging.getLogger(__name__)
 from services import (
     UserService,
     SubscriptionService,
@@ -143,10 +146,16 @@ async def cmd_start(message: Message) -> None:
 
         # Обрабатываем реферал для нового или существующего пользователя без referred_by
         if referrer_id and referrer_id != message.from_user.id and user.referred_by is None:
-            await ReferralService.process_referral(
-                session, message.from_user.id, referrer_id,
-                bot=message.bot,
-            )
+            try:
+                await ReferralService.process_referral(
+                    session, message.from_user.id, referrer_id,
+                    bot=message.bot,
+                )
+            except Exception as _e:
+                _log.error(
+                    f"Referral processing failed new_user={message.from_user.id} ref={referrer_id}: {_e}",
+                    exc_info=True,
+                )
 
         lang = user.language
         is_admin = user.is_admin

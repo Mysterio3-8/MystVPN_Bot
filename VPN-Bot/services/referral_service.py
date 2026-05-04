@@ -9,7 +9,7 @@ import logging
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import User, Subscription
-from config import config, REFERRAL_BONUS_DAYS, REFERRAL_MILESTONE, REFERRAL_MILESTONE_DAYS
+from config import config, REFERRAL_BONUS_DAYS
 
 logger = logging.getLogger(__name__)
 
@@ -59,38 +59,24 @@ class ReferralService:
 
         referrer.extra_days = (referrer.extra_days or 0) + REFERRAL_BONUS_DAYS
 
+        await session.flush()
+
         count_result = await session.execute(
             select(func.count()).where(User.referred_by == referrer_id)
         )
         total_refs = count_result.scalar() or 0
 
-        milestone_hit = total_refs > 0 and REFERRAL_MILESTONE > 1 and total_refs % REFERRAL_MILESTONE == 0
-
-        if milestone_hit:
-            referrer.extra_days += REFERRAL_MILESTONE_DAYS
-
         await session.commit()
 
         if bot:
             try:
-                if milestone_hit:
-                    msg = (
-                        f"🎉 <b>Milestone {total_refs} рефералов!</b>\n\n"
-                        f"🎁 +{REFERRAL_BONUS_DAYS} дней — обычный бонус\n"
-                        f"🏆 +{REFERRAL_MILESTONE_DAYS} дней — milestone бонус\n\n"
-                        f"Итого накоплено: <b>{referrer.extra_days} дней</b>\n\n"
-                        f"Применить: /cabinet → 👥 Рефералы → Применить бонус"
-                    )
-                else:
-                    left = REFERRAL_MILESTONE - (total_refs % REFERRAL_MILESTONE)
-                    msg = (
-                        f"👥 По вашей ссылке зарегистрировался новый пользователь!\n\n"
-                        f"🎁 Начислено: <b>+{REFERRAL_BONUS_DAYS} дней</b>\n"
-                        f"Всего рефералов: <b>{total_refs}</b>\n"
-                        f"До бонуса ещё: <b>{left}</b> чел.\n"
-                        f"Накоплено: <b>{referrer.extra_days} дней</b>\n\n"
-                        f"Применить: /cabinet → 👥 Рефералы → Применить бонус"
-                    )
+                msg = (
+                    f"👥 По вашей ссылке зарегистрировался новый пользователь!\n\n"
+                    f"🎁 Начислено: <b>+{REFERRAL_BONUS_DAYS} дней</b>\n"
+                    f"Всего рефералов: <b>{total_refs}</b>\n"
+                    f"Накоплено: <b>{referrer.extra_days} дней</b>\n\n"
+                    f"Применить: /cabinet → 👥 Рефералы → Применить бонус"
+                )
                 await bot.send_message(referrer_id, msg, parse_mode="HTML")
             except Exception as e:
                 logger.warning(f"Cannot notify referrer {referrer_id}: {e}")
@@ -124,3 +110,73 @@ class ReferralService:
         user.extra_days = 0
         await session.commit()
         return days
+
+    @staticmethod
+    async def run_monthly_credit(bot=None) -> None:
+        """Ежемесячное начисление дней за активных рефералов (только с активной подпиской)."""
+        from datetime import date
+        from database import AsyncSessionLocal
+        import redis.asyncio as aioredis
+
+        month_key = f"referral_monthly_credit:{date.today().strftime('%Y-%m')}"
+        r = aioredis.from_url(f"redis://{config.redis_host}:{config.redis_port}")
+        try:
+            already_ran = await r.exists(month_key)
+        finally:
+            await r.aclose()
+        if already_ran:
+            return
+
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(
+                select(User.referred_by).where(User.referred_by.isnot(None)).distinct()
+            )
+            referrer_ids = [row[0] for row in rows.fetchall()]
+
+        for referrer_id in referrer_ids:
+            async with AsyncSessionLocal() as session:
+                active_count_result = await session.execute(
+                    select(func.count())
+                    .select_from(User)
+                    .join(
+                        Subscription,
+                        (Subscription.user_id == User.user_id)
+                        & (Subscription.status == "active")
+                        & (Subscription.is_trial.is_(False)),
+                    )
+                    .where(User.referred_by == referrer_id)
+                )
+                active_count = active_count_result.scalar() or 0
+                if active_count == 0:
+                    continue
+
+                days_to_add = active_count * REFERRAL_BONUS_DAYS
+                referrer_res = await session.execute(
+                    select(User).where(User.user_id == referrer_id).with_for_update()
+                )
+                referrer = referrer_res.scalar_one_or_none()
+                if not referrer:
+                    continue
+
+                referrer.extra_days = (referrer.extra_days or 0) + days_to_add
+                await session.commit()
+
+                if bot:
+                    try:
+                        await bot.send_message(
+                            referrer_id,
+                            f"💰 <b>Ежемесячный реферальный бонус!</b>\n\n"
+                            f"Активных рефералов: <b>{active_count}</b>\n"
+                            f"Начислено: <b>+{days_to_add} дней</b>\n\n"
+                            f"Применить: /cabinet → 👥 Рефералы → Применить бонус",
+                            parse_mode="HTML",
+                        )
+                    except Exception as e:
+                        logger.warning(f"Cannot notify referrer {referrer_id} monthly: {e}")
+
+        r = aioredis.from_url(f"redis://{config.redis_host}:{config.redis_port}")
+        try:
+            await r.set(month_key, "1", ex=35 * 86400)
+        finally:
+            await r.aclose()
+        logger.info(f"Monthly referral credit done for {len(referrer_ids)} referrers")

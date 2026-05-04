@@ -17,6 +17,8 @@ from services.referral_service import ReferralService
 logger = logging.getLogger(__name__)
 
 SCHEDULE_KEY = "marketing:scheduled"
+ABANDONED_SCORES_KEY = "marketing:abandoned_scores"
+ABANDONED_PLANS_KEY  = "marketing:abandoned_plans"
 CHECK_INTERVAL = 60
 
 
@@ -54,7 +56,16 @@ async def schedule_trial_sequence(user_id: int, trial_end: datetime) -> None:
 
 
 async def schedule_abandoned_checkout(user_id: int, plan_key: str) -> None:
-    await _schedule("abandoned_checkout", user_id, 30 * 60, plan_key=plan_key)
+    fire_at = _now_ts() + 30 * 60
+    try:
+        r = await _redis()
+        try:
+            await r.hset(ABANDONED_PLANS_KEY, str(user_id), plan_key)
+            await r.zadd(ABANDONED_SCORES_KEY, {str(user_id): fire_at})
+        finally:
+            await r.aclose()
+    except Exception as e:
+        logger.warning(f"Marketing schedule abandoned failed: {e}")
 
 
 async def _has_completed_after(user_id: int, since: datetime) -> bool:
@@ -128,10 +139,9 @@ async def _send_trial_message(bot, item: dict) -> None:
     await bot.send_message(user_id, text, reply_markup=keyboard, parse_mode="HTML")
 
 
-async def _send_abandoned_checkout(bot, item: dict) -> None:
-    user_id = int(item["user_id"])
-    plan_key = item.get("plan_key", "1_month")
-    since = datetime.fromisoformat(item["scheduled_at"])
+async def _send_abandoned_checkout_user(bot, user_id: int, plan_key: str) -> None:
+    from datetime import timedelta
+    since = datetime.utcnow() - timedelta(minutes=31)
     if await _has_completed_after(user_id, since):
         return
 
@@ -162,6 +172,7 @@ async def run_marketing_loop(bot) -> None:
     logger.info("📣 Marketing service started")
     while True:
         try:
+            # Trial sequence messages
             r = await _redis()
             try:
                 due = await r.zrangebyscore(SCHEDULE_KEY, 0, _now_ts(), start=0, num=25)
@@ -175,10 +186,37 @@ async def run_marketing_loop(bot) -> None:
                 try:
                     if item["kind"].startswith("trial_"):
                         await _send_trial_message(bot, item)
-                    elif item["kind"] == "abandoned_checkout":
-                        await _send_abandoned_checkout(bot, item)
                 except Exception as e:
                     logger.warning(f"Marketing item failed: {e}")
+
+            # Abandoned checkout (per-user dedup)
+            r = await _redis()
+            try:
+                due_ids = await r.zrangebyscore(ABANDONED_SCORES_KEY, 0, _now_ts(), start=0, num=25)
+                if due_ids:
+                    await r.zrem(ABANDONED_SCORES_KEY, *due_ids)
+                    plan_vals = await r.hmget(ABANDONED_PLANS_KEY, *due_ids)
+                    await r.hdel(ABANDONED_PLANS_KEY, *due_ids)
+                else:
+                    due_ids, plan_vals = [], []
+            finally:
+                await r.aclose()
+
+            for uid_b, plan_b in zip(due_ids, plan_vals):
+                uid = int(uid_b)
+                pk = (plan_b or b"1_month").decode()
+                try:
+                    await _send_abandoned_checkout_user(bot, uid, pk)
+                except Exception as e:
+                    logger.warning(f"Abandoned checkout uid={uid}: {e}")
+
+            # Monthly referral credit
+            try:
+                from services.referral_service import ReferralService
+                await ReferralService.run_monthly_credit(bot)
+            except Exception as e:
+                logger.warning(f"Monthly referral credit error: {e}")
+
         except Exception as e:
             logger.warning(f"Marketing loop error: {e}")
 
